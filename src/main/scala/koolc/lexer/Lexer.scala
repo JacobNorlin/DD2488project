@@ -40,19 +40,21 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
     val source = Source.fromFile(f)
     val charStream = source.bufferedReader();
 
-
+    var currentToken = charStream.read().toChar;
 
     import ctx.reporter._
+
 
     // Complete this file
 
     new Iterator[Token] {
       def hasNext = {
-        true;
+
+        !(currentToken.toByte == -1)
+
       }
 
       def next = {
-        var currentToken = charStream.read().toChar;
         val currentWord = new StringBuffer();
 
         var returnToken:Token = new ID("null")
@@ -74,19 +76,20 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               currentToken = charStream.read().toChar
             }
           }else{// Only the '/' char, mean return DIVISION token
+            returnToken = new DIVLIT
           }
           //Read in the next bit after the comment
-          currentToken = charStream.read().toChar;
+
 
         }
-        
         //KEYWORDS AND IDENTIFIERS
-        if(currentToken.isLetter){
+        else if(currentToken.isLetter){
           currentWord.append(currentToken);
-          currentToken = charStream.read().toChar;
+          currentToken = charStream.read().toChar
           while(currentToken.isLetterOrDigit){
-            currentWord.append(currentToken);
-            currentToken = charStream.read().toChar;
+            currentWord.append(currentToken)
+            currentToken = charStream.read().toChar
+
           }
           val t = getKeywordToken(currentWord.toString)
 
@@ -97,10 +100,11 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           }else{
             returnToken = new KEYWORD(currentWord.toString)
           }
+
         }
 
         //STRING LITERALS
-        if(currentToken.equals('"')){
+        else if(currentToken.equals('"')){
           currentToken = charStream.read().toChar;
           while(!currentToken.equals('"') && !currentToken.equals('\n')){
             currentWord.append(currentToken);
@@ -113,7 +117,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           }
         }
         //INT LITERALS
-        if(currentToken.isDigit){
+        else if(currentToken.isDigit){
           var k = 0
 
           while(currentToken.isDigit){
@@ -122,6 +126,51 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           }
           returnToken = new INTLIT(k)
         }
+        //SPECIAL CHARS
+        else if(!currentToken.isLetterOrDigit){
+          returnToken = currentToken match {
+            case '(' => new LPARENLIT
+            case ')' => new RPARENLIT
+            case '=' => {currentToken = charStream.read().toChar
+              if(currentToken.equals('=')){
+                new EQUALSLIT
+              }else{
+                new EQSIGNLIT
+              }
+            }
+            case ':' => new COLONLIT
+            case ';' => new SEMICOLONLIT
+            case '.' => new DOTLIT
+            case ',' => new COMMALIT
+            case '!' => new BANGLIT
+            case '[' => new LBRACKETLIT
+            case ']' => new RBRACKETLIT
+            case '{' => new LBRACELIT
+            case '}' => new RBRACELIT
+            case '&' => {currentToken = charStream.read().toChar
+              if(currentToken.equals('&')){
+                new ANDLIT
+              }else{
+                new BADLIT(currentToken.toString)
+              }
+            }
+            case '|' => {currentToken = charStream.read().toChar
+              if(currentToken.equals('&')){
+                new ORLIT
+              }else{
+                new BADLIT(currentToken.toString)
+              }
+            }
+            case '<' => new LESSTHANLIT
+            case '+' => new PLUSLIT
+            case '-' => new MINUSLIT
+            case '*' => new TIMESLIT
+            case _ => new BADLIT(currentToken.toString)
+
+          }
+          currentToken = charStream.read().toChar
+        }
+
 
 
         returnToken

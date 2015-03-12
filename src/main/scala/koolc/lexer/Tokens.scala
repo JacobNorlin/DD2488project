@@ -94,4 +94,91 @@ object Tokens {
   class KEYWORD(val value: String) extends Token(KEYWORDKIND){
     override def toString = "KEYWORD("+value+")"
   }
+
+  class LPARENLIT extends Token(LPAREN){
+    override def toString = "LPAREN"
+  }
+
+  class RPARENLIT extends Token(RPAREN){
+    override def toString = "RPAREN"
+  }
+
+  class COLONLIT extends Token(COLON){
+    override def toString = "COLON"
+  }
+
+  class SEMICOLONLIT extends Token(SEMICOLON){
+    override def toString = "SEMICOLON"
+  }
+
+  class DOTLIT extends Token(DOT){
+    override def toString = "DOT"
+  }
+
+  class COMMALIT extends Token(COMMA){
+    override def toString = "COMMA"
+  }
+
+  class EQSIGNLIT extends Token(EQSIGN){
+    override def toString = "EQSIGN"
+  }
+
+  class EQUALSLIT extends Token(EQUALS){
+    override def toString = "EQUALS"
+  }
+
+  class BANGLIT extends Token(BANG){
+    override def toString = "BANG"
+  }
+
+  class LBRACKETLIT extends Token(LBRACKET){
+    override def toString ="LBRACKET"
+  }
+
+  class RBRACKETLIT extends Token(RBRACKET){
+    override def toString ="RBRACKET"
+  }
+
+  class LBRACELIT extends Token(LBRACE){
+    override def toString ="LBRACE"
+  }
+
+  class RBRACELIT extends Token(RBRACE){
+    override def toString = "RBRACE"
+  }
+
+  class ANDLIT extends Token(AND){
+    override def toString ="AND"
+  }
+
+  class ORLIT extends Token(OR){
+    override def toString = "OR"
+  }
+
+  class PLUSLIT extends Token(PLUS){
+    override def toString = "PLUS"
+  }
+
+  class MINUSLIT extends Token(MINUS) {
+    override def toString = "MINUS"
+  }
+
+  class TIMESLIT extends Token(TIMES) {
+    override def toString = "TIMES"
+  }
+
+  class DIVLIT extends Token(DIV) {
+    override def toString = "DIV"
+  }
+
+
+  class LESSTHANLIT extends  Token(LESSTHAN){
+    override def toString = "LESSTHAN"
+  }
+
+
+  class BADLIT(val value:String) extends Token(BAD){
+    override def toString = "BAD("+value+")"
+  }
+
 }

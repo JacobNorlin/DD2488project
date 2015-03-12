@@ -41,12 +41,17 @@ object Main {
     val pipeline = Lexer andThen PrintTokens
     val program = pipeline.run(ctx)(ctx.file)
 
-    println(program.next());
-    println(program.next());
-    println(program.next());
-    println(program.next());
-    println(program.next());
-    println(program.next());
+    while(program.hasNext){
+      println(program.next())
+    }
+
+
+
+
+
+
+
+    //PrintTokens.run(ctx)(program);
 
 
   }
