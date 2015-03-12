@@ -67,13 +67,17 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         if(currentToken.equals('/')){
           currentToken = charStream.read().toChar
           if(currentToken.equals('/')){//Nomral comment
-            while(!currentToken.equals('\n') && !(currentToken == -1)){
+            while(!currentToken.equals('\n') && !(currentToken.toByte == -1)){
               currentToken = charStream.read().toChar
             }
           }else if(currentToken.equals('*')){//Block comments
-          val secondToken = charStream.read().toChar
-            while(!currentToken.equals('*') && secondToken.equals('/')){
+            var flag = true
+            while(!(currentToken.toByte == -1) && flag) {
               currentToken = charStream.read().toChar
+              if(currentToken.equals('*')) {
+                currentToken = charStream.read().toChar
+                if(currentToken.equals('/')) flag = false;
+              }
             }
           }else{// Only the '/' char, mean return DIVISION token
             returnToken = new DIVLIT
