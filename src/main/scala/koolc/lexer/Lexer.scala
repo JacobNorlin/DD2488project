@@ -5,6 +5,8 @@ import utils._
 import scala.io.Source
 import java.io.File
 
+import scala.runtime.Nothing$
+
 object Lexer extends Pipeline[File, Iterator[Token]] {
   import Tokens._
 
@@ -47,6 +49,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
     import ctx.reporter._
 
+
     def readNextToken:Char = {
       column += 1
 
@@ -72,29 +75,39 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
       def next = {
         val currentWord = new StringBuffer()
 
-        var returnToken:Token = new ID("null")
+        var returnToken:Token = new Token(Tokens.BAD)
 
         while(currentToken.isWhitespace) {
           currentToken = readNextToken
         }
 
         //COMMENTS
-        if(currentToken.equals('/')){
+        if(currentToken.equals('/')) {
           currentToken = readNextToken
-          if(currentToken.equals('/')){//Normal comment
-            while(!currentToken.equals('\n') && !(currentToken.toByte == -1)){
+          if (currentToken.equals('/')) {
+            //Normal comment
+            while (!currentToken.equals('\n') && !(currentToken.toByte == -1)) {
               currentToken = readNextToken
             }
-          }else if(currentToken.equals('*')){//Block comments
+            returnToken = next
+          }else if (currentToken.equals('*')) { //start block comment
+            //Block comments
             var flag = true
-            while(!(currentToken.toByte == -1) && flag) {
+            while (!(currentToken.toByte == -1) && flag) {
+
               currentToken = readNextToken
-              if(currentToken.equals('*')) {
+              if (currentToken.equals('*')) {
                 currentToken = readNextToken
-                if(currentToken.equals('/')) flag = false
+                if (currentToken.equals('/')){
+                  currentToken = readNextToken
+                  flag = false
+                }
               }
             }
-          }else{// Only the '/' char, means return DIVISION token
+            returnToken = next
+
+          } else {
+            // Only the '/' char, means return DIVISION token
             returnToken = new Token(Tokens.DIV)
           }
           //Read in the next bit after the comment
@@ -103,6 +116,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         }
         //KEYWORDS AND IDENTIFIERS
         else if(currentToken.isLetter){
+          //println("Current token is identifier or keyword")
           currentWord.append(currentToken);
           currentToken = readNextToken
           while(currentToken.isLetterOrDigit){
@@ -111,8 +125,8 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
           }
           //Get the tokenkind of the word
-          val tokenKind = getKeywordToken(currentWord.toString)
 
+          val tokenKind = getKeywordToken(currentWord.toString)
 
           //Check if tokenkind is identifier or keyword
           if(tokenKind.equals(Tokens.IDKIND)){
@@ -148,6 +162,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           returnToken = new INTLIT(k)
         }
         //SPECIAL CHARS
+
         else if(!currentToken.isLetterOrDigit){
           returnToken = currentToken match {
             case '(' => new Token(Tokens.LPAREN)
@@ -190,6 +205,11 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
           }
           currentToken = readNextToken
+        }
+
+        //Check if end of file
+        if(currentToken.toByte == -1){
+          returnToken = new Token(Tokens.EOF)
         }
 
         val pos = Position.encode(line, column);
