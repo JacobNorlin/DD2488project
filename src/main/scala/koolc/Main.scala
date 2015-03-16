@@ -42,7 +42,8 @@ object Main {
     val program = pipeline.run(ctx)(ctx.file)
 
     while(program.hasNext){
-      println(program.next())
+      val foo = program.next()
+      println(foo+" "+foo.position)
     }
 
 
