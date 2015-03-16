@@ -38,9 +38,9 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
   def run(ctx: Context)(f: File): Iterator[Token] = {
     val source = Source.fromFile(f)
-    val charStream = source.bufferedReader();
+    val charStream = source.bufferedReader()
 
-    var currentToken = charStream.read().toChar;
+    var currentToken = charStream.read().toChar
 
     import ctx.reporter._
 
@@ -55,7 +55,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
       }
 
       def next = {
-        val currentWord = new StringBuffer();
+        val currentWord = new StringBuffer()
 
         var returnToken:Token = new ID("null")
 
@@ -66,7 +66,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         //COMMENTS
         if(currentToken.equals('/')){
           currentToken = charStream.read().toChar
-          if(currentToken.equals('/')){//Nomral comment
+          if(currentToken.equals('/')){//Normal comment
             while(!currentToken.equals('\n') && !(currentToken.toByte == -1)){
               currentToken = charStream.read().toChar
             }
@@ -76,11 +76,11 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               currentToken = charStream.read().toChar
               if(currentToken.equals('*')) {
                 currentToken = charStream.read().toChar
-                if(currentToken.equals('/')) flag = false;
+                if(currentToken.equals('/')) flag = false
               }
             }
-          }else{// Only the '/' char, mean return DIVISION token
-            returnToken = new DIVLIT
+          }else{// Only the '/' char, means return DIVISION token
+            returnToken = new Token(Tokens.DIV)
           }
           //Read in the next bit after the comment
 
@@ -95,29 +95,31 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
             currentToken = charStream.read().toChar
 
           }
-          val t = getKeywordToken(currentWord.toString)
+          //Get the tokenkind of the word
+          val tokenKind = getKeywordToken(currentWord.toString)
 
 
-
-          if(t.equals(Tokens.IDKIND)){
+          //Check if tokenkind is identifier or keyword
+          if(tokenKind.equals(Tokens.IDKIND)){
             returnToken = new ID(currentWord.toString)
           }else{
-            returnToken = new KEYWORD(currentWord.toString)
+            //New token representing keyword
+            returnToken = new Token(tokenKind)
           }
 
         }
 
         //STRING LITERALS
         else if(currentToken.equals('"')){
-          currentToken = charStream.read().toChar;
+          currentToken = charStream.read().toChar
           while(!currentToken.equals('"') && !currentToken.equals('\n')){
-            currentWord.append(currentToken);
-            currentToken = charStream.read().toChar;
+            currentWord.append(currentToken)
+            currentToken = charStream.read().toChar
           }
           if(currentToken.equals('"')){
             returnToken = new STRLIT(currentWord.toString)
           }else{
-            returnToken = new ID("error");
+            returnToken = new ID("error")
           }
         }
         //INT LITERALS
@@ -125,7 +127,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           var k = 0
 
           while(currentToken.isDigit){
-            k = 10*k + currentToken.toString.toInt;
+            k = 10*k + currentToken.toString.toInt
             currentToken = charStream.read().toChar
           }
           returnToken = new INTLIT(k)
@@ -133,43 +135,43 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         //SPECIAL CHARS
         else if(!currentToken.isLetterOrDigit){
           returnToken = currentToken match {
-            case '(' => new LPARENLIT
-            case ')' => new RPARENLIT
+            case '(' => new Token(Tokens.LPAREN)
+            case ')' => new Token(Tokens.RPAREN)
             case '=' => {currentToken = charStream.read().toChar
               if(currentToken.equals('=')){
-                new EQUALSLIT
+                new Token(Tokens.EQUALS)
               }else{
-                new EQSIGNLIT
+                new Token(Tokens.EQSIGN)
               }
             }
-            case ':' => new COLONLIT
-            case ';' => new SEMICOLONLIT
-            case '.' => new DOTLIT
-            case ',' => new COMMALIT
-            case '!' => new BANGLIT
-            case '[' => new LBRACKETLIT
-            case ']' => new RBRACKETLIT
-            case '{' => new LBRACELIT
-            case '}' => new RBRACELIT
+            case ':' => new Token(Tokens.COLON)
+            case ';' => new Token(Tokens.SEMICOLON)
+            case '.' => new Token(Tokens.DOT)
+            case ',' => new Token(Tokens.COMMA)
+            case '!' => new Token(Tokens.BANG)
+            case '[' => new Token(Tokens.LBRACKET)
+            case ']' => new Token(Tokens.RBRACKET)
+            case '{' => new Token(Tokens.LBRACE)
+            case '}' => new Token(Tokens.RBRACE)
             case '&' => {currentToken = charStream.read().toChar
               if(currentToken.equals('&')){
-                new ANDLIT
+                new Token(Tokens.AND)
               }else{
-                new BADLIT(currentToken.toString)
+                new Token(Tokens.BAD)
               }
             }
             case '|' => {currentToken = charStream.read().toChar
               if(currentToken.equals('&')){
-                new ORLIT
+                new Token(Tokens.OR)
               }else{
-                new BADLIT(currentToken.toString)
+                new Token(Tokens.BAD)
               }
             }
-            case '<' => new LESSTHANLIT
-            case '+' => new PLUSLIT
-            case '-' => new MINUSLIT
-            case '*' => new TIMESLIT
-            case _ => new BADLIT(currentToken.toString)
+            case '<' => new Token(Tokens.LESSTHAN)
+            case '+' => new Token(Tokens.PLUS)
+            case '-' => new Token(Tokens.MINUS)
+            case '*' => new Token(Tokens.TIMES)
+            case _ => new Token(Tokens.BAD)
 
           }
           currentToken = charStream.read().toChar
