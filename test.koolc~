@@ -1,1 +1,10 @@
-if(foo == 0)
+//this is a test file
+/*with a
+multi
+comment*/
+foo = "hej"
+bar = 1
+while(bar < foo){
+   foo = 'a'
+}
+

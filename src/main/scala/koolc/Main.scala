@@ -21,6 +21,8 @@ object Main {
       case f ::args =>
         files = new File(f) :: files
         processOption(args)
+      case "--token" =>
+
 
 
       case Nil =>
@@ -44,7 +46,7 @@ object Main {
 
 
     for (t <- program) {
-      println(t+"("+t.line+":"+t.col+") ")
+      println(t)
     }
 
 

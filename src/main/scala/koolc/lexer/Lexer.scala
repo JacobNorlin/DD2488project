@@ -142,7 +142,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           }else{
             returnToken = new Token(Tokens.BAD)
           }
-          //Read in next charachter to avoid running again with bad char or "
+          //Read in next charachter to avoid running again with bad o
           currentToken = readNextToken
         }
         //INT LITERALS
