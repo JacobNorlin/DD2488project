@@ -10,8 +10,7 @@ import scala.runtime.Nothing$
 object Lexer extends Pipeline[File, Iterator[Token]] {
   import Tokens._
 
-
-  def getKeywordToken(keyWord: String): TokenKind ={
+  def getKeywordToken(keyWord: String): TokenKind = {
     keyWord match {
       case "object" => Tokens.OBJECT
       case "class" => Tokens.CLASS
@@ -37,7 +36,6 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
     }
   }
 
-
   def run(ctx: Context)(f: File): Iterator[Token] = {
     val source = Source.fromFile(f)
 
@@ -45,17 +43,15 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
     import ctx.reporter._
 
-
-    def readNextToken:Char = {
+    def readNextToken: Char = {
 
       var token = -1.toChar
 
-      if(source.hasNext){
+      if (source.hasNext) {
         token = source.next()
       }
       token
     }
-
 
     // Complete this file
 
@@ -69,49 +65,49 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
       def next = {
         val currentWord = new StringBuffer()
 
-        var returnToken:Token = new Token(Tokens.BAD)
-
-        while(currentToken.isWhitespace) {
-          currentToken = readNextToken
-        }
+        var returnToken: Token = new Token(Tokens.BAD)
 
         //COMMENTS
-        if(currentToken.equals('/')) {
-          currentToken = readNextToken
+        var continue = false;
+        do {
+          while (currentToken.isWhitespace) {
+            currentToken = readNextToken
+          }
           if (currentToken.equals('/')) {
-            //Normal comment
-            while (!currentToken.equals('\n') && !(currentToken.toByte == -1)) {
-              currentToken = readNextToken
-            }
-            returnToken = next
-          }else if (currentToken.equals('*')) { //start block comment
-            //Block comments
-            var flag = true
-            while (!(currentToken.toByte == -1) && flag) {
-
-              currentToken = readNextToken
-              if (currentToken.equals('*')) {
+            currentToken = readNextToken
+            if (currentToken.equals('/')) {
+              //Normal comment
+              while (!currentToken.equals('\n') && !(currentToken.toByte == -1)) {
                 currentToken = readNextToken
-                if (currentToken.equals('/')){
+              }
+              continue = true
+            } else if (currentToken.equals('*')) { //start block comment
+              //Block comments
+              var flag = true
+              while (!(currentToken.toByte == -1) && flag) {
+
+                currentToken = readNextToken
+                if (currentToken.equals('*')) {
                   currentToken = readNextToken
-                  flag = false
+                  if (currentToken.equals('/')) {
+                    currentToken = readNextToken
+                    flag = false
+                  }
                 }
               }
+              continue = true
+            } else {
+              // Only the '/' char, means return DIVISION token
+              returnToken = new Token(Tokens.DIV)
             }
-            returnToken = next
 
-          } else {
-            // Only the '/' char, means return DIVISION token
-            returnToken = new Token(Tokens.DIV)
-          }
-
-
-        }
+          } else { continue = false }
+        } while (continue);
         //KEYWORDS AND IDENTIFIERS
-        else if(currentToken.isLetter){
+        if (currentToken.isLetter) {
           currentWord.append(currentToken)
           currentToken = readNextToken
-          while(currentToken.isLetterOrDigit){
+          while (currentToken.isLetterOrDigit) {
             currentWord.append(currentToken)
             currentToken = readNextToken
 
@@ -121,50 +117,46 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           val tokenKind = getKeywordToken(currentWord.toString)
 
           //Check if tokenkind is identifier or keyword
-          if(tokenKind.equals(Tokens.IDKIND)){
+          if (tokenKind.equals(Tokens.IDKIND)) {
             returnToken = new ID(currentWord.toString)
-          }else{
+          } else {
             //New token representing keyword
             returnToken = new Token(tokenKind)
           }
 
-        }
-
-        //STRING LITERALS
-        else if(currentToken.equals('"')){
+        } //STRING LITERALS
+        else if (currentToken.equals('"')) {
           currentToken = readNextToken
-          while(!currentToken.equals('"') && !currentToken.equals('\n')){
+          while (!currentToken.equals('"') && !currentToken.equals('\n')) {
             currentWord.append(currentToken)
             currentToken = readNextToken
           }
-          if(currentToken.equals('"')){
+          if (currentToken.equals('"')) {
             returnToken = new STRLIT(currentWord.toString)
-          }else{
+          } else {
             returnToken = new Token(Tokens.BAD)
           }
           //Read in next charachter to avoid running again with bad char or "
           currentToken = readNextToken
-        }
-        //INT LITERALS
-        else if(currentToken.isDigit){
+        } //INT LITERALS
+        else if (currentToken.isDigit) {
           var k = 0
 
-          while(currentToken.isDigit){
-            k = 10*k + currentToken.toString.toInt
+          while (currentToken.isDigit) {
+            k = 10 * k + currentToken.toString.toInt
             currentToken = readNextToken
           }
           returnToken = new INTLIT(k)
-        }
-        //SPECIAL CHARS
-
-        else if(!currentToken.isLetterOrDigit){
+        } //SPECIAL CHARS
+        else if (!currentToken.isLetterOrDigit) {
           returnToken = currentToken match {
             case '(' => new Token(Tokens.LPAREN)
             case ')' => new Token(Tokens.RPAREN)
-            case '=' => {currentToken = readNextToken
-              if(currentToken.equals('=')){
+            case '=' => {
+              currentToken = readNextToken
+              if (currentToken.equals('=')) {
                 new Token(Tokens.EQUALS)
-              }else{
+              } else {
                 new Token(Tokens.EQSIGN)
               }
             }
@@ -177,17 +169,19 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
             case ']' => new Token(Tokens.RBRACKET)
             case '{' => new Token(Tokens.LBRACE)
             case '}' => new Token(Tokens.RBRACE)
-            case '&' => {currentToken = readNextToken
-              if(currentToken.equals('&')){
+            case '&' => {
+              currentToken = readNextToken
+              if (currentToken.equals('&')) {
                 new Token(Tokens.AND)
-              }else{
+              } else {
                 new Token(Tokens.BAD)
               }
             }
-            case '|' => {currentToken = readNextToken
-              if(currentToken.equals('&')){
+            case '|' => {
+              currentToken = readNextToken
+              if (currentToken.equals('&')) {
                 new Token(Tokens.OR)
-              }else{
+              } else {
                 new Token(Tokens.BAD)
               }
             }
@@ -202,13 +196,12 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         }
 
         //Check if end of file
-        if(currentToken.toByte == -1){
+        if (currentToken.toByte == -1) {
           returnToken = new Token(Tokens.EOF)
         }
 
         returnToken.setPos(ctx.file, source.pos)
         returnToken
-
 
       }
     }
