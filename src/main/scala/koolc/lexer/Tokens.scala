@@ -23,10 +23,6 @@ object Tokens {
     override def toString = "identifier"
   }
 
-  object KEYWORDKIND extends TokenKind{
-    override def toString = "keyword"
-  }
-
   object Kinded {
     def unapply(t: Token): Option[TokenKind] = {
       Some(t.kind)
