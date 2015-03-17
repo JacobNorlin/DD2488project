@@ -40,16 +40,18 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
     val source = Source.fromFile(f)
 
     var currentToken = source.next()
+    var EOFFound = false;
+    val EOFChar = -1.toChar
 
     import ctx.reporter._
 
     def readNextToken: Char = {
 
       var token = -1.toChar
-
       if (source.hasNext) {
         token = source.next()
       }
+
       token
     }
 
@@ -57,22 +59,32 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
     new Iterator[Token] {
       def hasNext = {
-
-        !(currentToken.toByte == -1)
-
+        !EOFFound
       }
 
       def next = {
         val currentWord = new StringBuffer()
+        var divFound = false
 
         var returnToken: Token = new Token(Tokens.BAD)
 
         //COMMENTS
+        //println("currentToken at start of next: " + currentToken)
+
+
+
         var continue = false;
         do {
           while (currentToken.isWhitespace) {
             currentToken = readNextToken
           }
+
+          //Set that there is no more input
+          if (currentToken.toByte == -1) {
+            EOFFound = true
+          }
+
+          //COMMENTS
           if (currentToken.equals('/')) {
             currentToken = readNextToken
             if (currentToken.equals('/')) {
@@ -85,6 +97,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               //Block comments
               var flag = true
               while (!(currentToken.toByte == -1) && flag) {
+
 
                 currentToken = readNextToken
                 if (currentToken.equals('*')) {
@@ -99,106 +112,113 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
             } else {
               // Only the '/' char, means return DIVISION token
               returnToken = new Token(Tokens.DIV)
+              divFound = true
             }
 
           } else { continue = false }
         } while (continue);
         //KEYWORDS AND IDENTIFIERS
-        if (currentToken.isLetter) {
-          currentWord.append(currentToken)
-          currentToken = readNextToken
-          while (currentToken.isLetterOrDigit) {
+        if(!divFound){
+          if (currentToken.isLetter) {
             currentWord.append(currentToken)
             currentToken = readNextToken
+            while (currentToken.isLetterOrDigit) {
+              currentWord.append(currentToken)
+              currentToken = readNextToken
 
-          }
-          //Get the tokenkind of the word
+            }
 
-          val tokenKind = getKeywordToken(currentWord.toString)
+            //Get the tokenkind of the word
 
-          //Check if tokenkind is identifier or keyword
-          if (tokenKind.equals(Tokens.IDKIND)) {
-            returnToken = new ID(currentWord.toString)
-          } else {
-            //New token representing keyword
-            returnToken = new Token(tokenKind)
-          }
+            val tokenKind = getKeywordToken(currentWord.toString)
 
-        } //STRING LITERALS
-        else if (currentToken.equals('"')) {
-          currentToken = readNextToken
-          while (!currentToken.equals('"') && !currentToken.equals('\n')) {
-            currentWord.append(currentToken)
+            //Check if tokenkind is identifier or keyword
+            if (tokenKind.equals(Tokens.IDKIND)) {
+              returnToken = new ID(currentWord.toString)
+            } else {
+              //New token representing keyword
+              returnToken = new Token(tokenKind)
+            }
+
+          } //STRING LITERALS
+          else if (currentToken.equals('"')) {
             currentToken = readNextToken
-          }
-          if (currentToken.equals('"')) {
-            returnToken = new STRLIT(currentWord.toString)
-          } else {
-            returnToken = new Token(Tokens.BAD)
-          }
-          //Read in next charachter to avoid running again with bad o
-          currentToken = readNextToken
-        } //INT LITERALS
-        else if (currentToken.isDigit) {
-          var k = 0
-
-          while (currentToken.isDigit) {
-            k = 10 * k + currentToken.toString.toInt
+            while (!currentToken.equals('"') && !currentToken.equals('\n') && !currentToken.equals(-1.toChar)) {
+              currentWord.append(currentToken)
+              currentToken = readNextToken
+            }
+            if (currentToken.equals('"')) {
+              returnToken = new STRLIT(currentWord.toString)
+            } else {
+              returnToken = new Token(Tokens.BAD)
+            }
+            //Read in next charachter to avoid running again with bad o
             currentToken = readNextToken
-          }
-          returnToken = new INTLIT(k)
-        } //SPECIAL CHARS
-        else if (!currentToken.isLetterOrDigit) {
-          returnToken = currentToken match {
-            case '(' => new Token(Tokens.LPAREN)
-            case ')' => new Token(Tokens.RPAREN)
-            case '=' => {
+          } //INT LITERALS
+          else if (currentToken.isDigit) {
+            var k = 0
+
+            while (currentToken.isDigit) {
+              k = 10 * k + currentToken.toString.toInt
               currentToken = readNextToken
-              if (currentToken.equals('=')) {
-                new Token(Tokens.EQUALS)
-              } else {
-                new Token(Tokens.EQSIGN)
-              }
             }
-            case ':' => new Token(Tokens.COLON)
-            case ';' => new Token(Tokens.SEMICOLON)
-            case '.' => new Token(Tokens.DOT)
-            case ',' => new Token(Tokens.COMMA)
-            case '!' => new Token(Tokens.BANG)
-            case '[' => new Token(Tokens.LBRACKET)
-            case ']' => new Token(Tokens.RBRACKET)
-            case '{' => new Token(Tokens.LBRACE)
-            case '}' => new Token(Tokens.RBRACE)
-            case '&' => {
+            returnToken = new INTLIT(k)
+          } //SPECIAL CHARS
+          else if (!currentToken.isLetterOrDigit) {
+            var skipRead = true
+            returnToken = currentToken match {
+              case '(' => new Token(Tokens.LPAREN)
+              case ')' => new Token(Tokens.RPAREN)
+              case '=' => {
+                currentToken = readNextToken
+                if (currentToken.equals('=')) {
+                  new Token(Tokens.EQUALS)
+                } else {
+                  skipRead = false
+                  new Token(Tokens.EQSIGN)
+                }
+              }
+              case ':' => new Token(Tokens.COLON)
+              case ';' => new Token(Tokens.SEMICOLON)
+              case '.' => new Token(Tokens.DOT)
+              case ',' => new Token(Tokens.COMMA)
+              case '!' => new Token(Tokens.BANG)
+              case '[' => new Token(Tokens.LBRACKET)
+              case ']' => new Token(Tokens.RBRACKET)
+              case '{' => new Token(Tokens.LBRACE)
+              case '}' => new Token(Tokens.RBRACE)
+              case '&' => {
+                currentToken = readNextToken
+                if (currentToken.equals('&')) {
+                  new Token(Tokens.AND)
+                } else {
+                  new Token(Tokens.BAD)
+                }
+              }
+              case '|' => {
+                currentToken = readNextToken
+                if (currentToken.equals('&')) {
+                  new Token(Tokens.OR)
+                } else {
+                  new Token(Tokens.BAD)
+                }
+              }
+              case '<' => new Token(Tokens.LESSTHAN)
+              case '+' => new Token(Tokens.PLUS)
+              case '-' => new Token(Tokens.MINUS)
+              case '*' => new Token(Tokens.TIMES)
+              case '/' => new Token(Tokens.DIV)
+              case EOFChar => new Token(Tokens.EOF)
+              case _ => new Token(Tokens.BAD)
+
+            }
+            if(skipRead){
               currentToken = readNextToken
-              if (currentToken.equals('&')) {
-                new Token(Tokens.AND)
-              } else {
-                new Token(Tokens.BAD)
-              }
             }
-            case '|' => {
-              currentToken = readNextToken
-              if (currentToken.equals('&')) {
-                new Token(Tokens.OR)
-              } else {
-                new Token(Tokens.BAD)
-              }
-            }
-            case '<' => new Token(Tokens.LESSTHAN)
-            case '+' => new Token(Tokens.PLUS)
-            case '-' => new Token(Tokens.MINUS)
-            case '*' => new Token(Tokens.TIMES)
-            case _ => new Token(Tokens.BAD)
 
           }
-          currentToken = readNextToken
         }
 
-        //Check if end of file
-        if (currentToken.toByte == -1) {
-          returnToken = new Token(Tokens.EOF)
-        }
 
         returnToken.setPos(ctx.file, source.pos)
         returnToken

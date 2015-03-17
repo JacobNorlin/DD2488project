@@ -1,10 +1,9 @@
-//this is a test file
-/*with a
-multi
-comment*/
-foo = "hej"
-bar = 1
-while(bar < foo/*bar*/){
-   foo = 'a'
+foo/*test*/==a
+///
+///
+'
+a
+'
+if(a==b){
+ a[0] = a/2;
 }
-

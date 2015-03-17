@@ -21,7 +21,7 @@ object Main {
       case f ::args =>
         files = new File(f) :: files
         processOption(args)
-      case "--token" =>
+
 
 
 
@@ -46,7 +46,7 @@ object Main {
 
 
     for (t <- program) {
-      println(t)
+      println()
     }
 
 
