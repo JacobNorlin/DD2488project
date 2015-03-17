@@ -40,12 +40,13 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
   def run(ctx: Context)(f: File): Iterator[Token] = {
     val source = Source.fromFile(f)
+
     val charStream = source.bufferedReader()
     var column = Position.column(Position.FIRSTPOS);
     var line = Position.line(Position.FIRSTPOS);
 
-
-    var currentToken = charStream.read().toChar
+    //println("!====="+source.next())
+    var currentToken = source.next()
 
     import ctx.reporter._
 
@@ -57,8 +58,10 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         line+=1
         column = 0
       }
-      val token = charStream.read().toChar
-
+      var token = -1.toChar
+      if(source.hasNext){
+        token = source.next()
+      }
       token
     }
 
@@ -213,7 +216,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         }
 
         val pos = Position.encode(line, column);
-        returnToken.setPos(ctx.file, pos)
+        returnToken.setPos(ctx.file, source.pos)
         returnToken
 
 

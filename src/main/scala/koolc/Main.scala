@@ -22,6 +22,7 @@ object Main {
         files = new File(f) :: files
         processOption(args)
 
+
       case Nil =>
     }
 
@@ -41,18 +42,10 @@ object Main {
     val pipeline = Lexer andThen PrintTokens
     val program = pipeline.run(ctx)(ctx.file)
 
-    while(program.hasNext){
-      val foo = program.next()
-      println(foo+" "+foo.position)
+
+    for (t <- program) {
+      println(t+"("+t.line+":"+t.col+") ")
     }
-
-
-
-
-
-
-
-    //PrintTokens.run(ctx)(program);
 
 
   }
