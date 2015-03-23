@@ -39,7 +39,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
   def run(ctx: Context)(f: File): Iterator[Token] = {
     val source = Source.fromFile(f)
 
-    var currentToken = source.next()
+    var currentChar = source.next()
     var EOFFound = false;
     val EOFChar = -1.toChar
 
@@ -70,41 +70,41 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         var returnToken: Token = new Token(Tokens.BAD)
 
         //COMMENTS
-        //println("currentToken at start of next: " + currentToken)
+        //println("currentChar at start of next: " + currentChar)
 
 
 
         var continue = false;
         do {
-          while (currentToken.isWhitespace) {
-            currentToken = readNextToken
+          while (currentChar.isWhitespace) {
+            currentChar = readNextToken
           }
 
           //Set that there is no more input
-          if (currentToken.toByte == -1) {
+          if (currentChar.toByte == -1) {
             EOFFound = true
           }
 
           //COMMENTS
-          if (currentToken.equals('/')) {
-            currentToken = readNextToken
-            if (currentToken.equals('/')) {
+          if (currentChar.equals('/')) {
+            currentChar = readNextToken
+            if (currentChar.equals('/')) {
               //Normal comment
-              while (!currentToken.equals('\n') && !(currentToken.toByte == -1)) {
-                currentToken = readNextToken
+              while (!currentChar.equals('\n') && !(currentChar.toByte == -1)) {
+                currentChar = readNextToken
               }
               continue = true
-            } else if (currentToken.equals('*')) { //start block comment
+            } else if (currentChar.equals('*')) { //start block comment
               //Block comments
               var flag = true
-              while (!(currentToken.toByte == -1) && flag) {
+              while (!(currentChar.toByte == -1) && flag) {
 
 
-                currentToken = readNextToken
-                if (currentToken.equals('*')) {
-                  currentToken = readNextToken
-                  if (currentToken.equals('/')) {
-                    currentToken = readNextToken
+                currentChar = readNextToken
+                if (currentChar.equals('*')) {
+                  currentChar = readNextToken
+                  if (currentChar.equals('/')) {
+                    currentChar = readNextToken
                     flag = false
                   }
                 }
@@ -120,12 +120,12 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         } while (continue)
         //KEYWORDS AND IDENTIFIERS
         if(!divFound){
-          if (currentToken.isLetter) {
-            currentWord.append(currentToken)
-            currentToken = readNextToken
-            while (currentToken.isLetterOrDigit || currentToken.equals('_')) {
-              currentWord.append(currentToken)
-              currentToken = readNextToken
+          if (currentChar.isLetter) {
+            currentWord.append(currentChar)
+            currentChar = readNextToken
+            while (currentChar.isLetterOrDigit || currentChar.equals('_')) {
+              currentWord.append(currentChar)
+              currentChar = readNextToken
 
             }
 
@@ -142,38 +142,38 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
             }
 
           } //STRING LITERALS
-          else if (currentToken.equals('"')) {
-            currentToken = readNextToken
-            while (!currentToken.equals('"') && !currentToken.equals('\n') && !currentToken.equals(-1.toChar)) {
-              currentWord.append(currentToken)
-              currentToken = readNextToken
+          else if (currentChar.equals('"')) {
+            currentChar = readNextToken
+            while (!currentChar.equals('"') && !currentChar.equals('\n') && !currentChar.equals(-1.toChar)) {
+              currentWord.append(currentChar)
+              currentChar = readNextToken
             }
-            if (currentToken.equals('"')) {
+            if (currentChar.equals('"')) {
               returnToken = new STRLIT(currentWord.toString)
             } else {
               returnToken = new Token(Tokens.BAD)
               errorMessage = "Missing closing \""
             }
             //Read in next charachter to avoid running again with bad o
-            currentToken = readNextToken
+            currentChar = readNextToken
           } //INT LITERALS
-          else if (currentToken.isDigit) {
+          else if (currentChar.isDigit) {
             var k = 0
 
-            while (currentToken.isDigit) {
-              k = 10 * k + currentToken.toString.toInt
-              currentToken = readNextToken
+            while (currentChar.isDigit) {
+              k = 10 * k + currentChar.toString.toInt
+              currentChar = readNextToken
             }
             returnToken = new INTLIT(k)
           } //SPECIAL CHARS
-          else if (!currentToken.isLetterOrDigit) {
+          else if (!currentChar.isLetterOrDigit) {
             var skipRead = true
-            returnToken = currentToken match {
+            returnToken = currentChar match {
               case '(' => new Token(Tokens.LPAREN)
               case ')' => new Token(Tokens.RPAREN)
               case '=' => {
-                currentToken = readNextToken
-                if (currentToken.equals('=')) {
+                currentChar = readNextToken
+                if (currentChar.equals('=')) {
                   new Token(Tokens.EQUALS)
                 } else {
                   skipRead = false
@@ -190,8 +190,8 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               case '{' => new Token(Tokens.LBRACE)
               case '}' => new Token(Tokens.RBRACE)
               case '&' => {
-                currentToken = readNextToken
-                if (currentToken.equals('&')) {
+                currentChar = readNextToken
+                if (currentChar.equals('&')) {
                   new Token(Tokens.AND)
                 } else {
                   errorMessage = "Incorrect &&"
@@ -199,8 +199,8 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
                 }
               }
               case '|' => {
-                currentToken = readNextToken
-                if (currentToken.equals('|')) {
+                currentChar = readNextToken
+                if (currentChar.equals('|')) {
                   new Token(Tokens.OR)
                 } else {
                   errorMessage = "Incorrect ||"
@@ -221,7 +221,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
             }
             if(skipRead){
-              currentToken = readNextToken
+              currentChar = readNextToken
             }
 
           }
