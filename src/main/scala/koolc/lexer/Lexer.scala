@@ -65,6 +65,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
       def next = {
         val currentWord = new StringBuffer()
         var divFound = false
+        var errorMessage = ""
 
         var returnToken: Token = new Token(Tokens.BAD)
 
@@ -116,13 +117,13 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
             }
 
           } else { continue = false }
-        } while (continue);
+        } while (continue)
         //KEYWORDS AND IDENTIFIERS
         if(!divFound){
           if (currentToken.isLetter) {
             currentWord.append(currentToken)
             currentToken = readNextToken
-            while (currentToken.isLetterOrDigit) {
+            while (currentToken.isLetterOrDigit || currentToken.equals('_')) {
               currentWord.append(currentToken)
               currentToken = readNextToken
 
@@ -151,6 +152,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               returnToken = new STRLIT(currentWord.toString)
             } else {
               returnToken = new Token(Tokens.BAD)
+              errorMessage = "Missing closing \""
             }
             //Read in next charachter to avoid running again with bad o
             currentToken = readNextToken
@@ -192,14 +194,16 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
                 if (currentToken.equals('&')) {
                   new Token(Tokens.AND)
                 } else {
+                  errorMessage = "Incorrect &&"
                   new Token(Tokens.BAD)
                 }
               }
               case '|' => {
                 currentToken = readNextToken
-                if (currentToken.equals('&')) {
+                if (currentToken.equals('|')) {
                   new Token(Tokens.OR)
                 } else {
+                  errorMessage = "Incorrect ||"
                   new Token(Tokens.BAD)
                 }
               }
@@ -209,7 +213,11 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               case '*' => new Token(Tokens.TIMES)
               case '/' => new Token(Tokens.DIV)
               case EOFChar => new Token(Tokens.EOF)
-              case _ => new Token(Tokens.BAD)
+              case _ => {
+                errorMessage = "Invalid character"
+                new Token(Tokens.BAD)
+              }
+
 
             }
             if(skipRead){
@@ -221,6 +229,10 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
 
         returnToken.setPos(ctx.file, source.pos)
+        if(returnToken.kind.equals(Tokens.BAD)){
+          error(errorMessage, returnToken)
+        }
+
         returnToken
 
       }

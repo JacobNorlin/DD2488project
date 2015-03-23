@@ -1,9 +1,1 @@
-foo/*test*/==a
-///
-///
-'
-a
-'
-if(a==b){
- a[0] = a/2;
-}
+println("hej")
