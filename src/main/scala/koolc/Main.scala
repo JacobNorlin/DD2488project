@@ -4,6 +4,7 @@ import utils._
 import java.io.File
 
 import lexer._
+import ast._
 
 object Main {
 
@@ -39,15 +40,14 @@ object Main {
 
 
   def main(args: Array[String]) {
+
     val ctx = processOptions(args)
 
-    val pipeline = Lexer andThen PrintTokens
+    val pipeline = Lexer andThen Parser
+
     val program = pipeline.run(ctx)(ctx.file)
 
-
-    for (t <- program) {
-      println()
-    }
+    println(program)
 
 
   }
