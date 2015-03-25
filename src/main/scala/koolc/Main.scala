@@ -8,25 +8,35 @@ import ast._
 
 object Main {
 
+  var pipeline = Lexer andThen Parser
+
   def processOptions(args: Array[String]): Context = {
 
     val reporter = new Reporter()
     var outDir: Option[File] = None
     var files: List[File] = Nil
 
-    def processOption(args: List[String]): Unit = args match {
-      case "-d" :: out :: args =>
-        outDir = Some(new File(out))
-        processOption(args)
+    def processOption(args: List[String]): Unit = {
+      args match {
+        case "-d" :: out :: args =>
+          outDir = Some(new File(out))
+          processOption(args)
 
-      case f ::args =>
-        files = new File(f) :: files
-        processOption(args)
+        case "--tokens" :: args =>{
+          processOption(args)
+          pipeline = Lexer andThen PrintTokens andThen Parser
+        }
+
+
+        case f ::args =>
+          files = new File(f) :: files
+          processOption(args)
 
 
 
 
-      case Nil =>
+        case Nil =>
+      }
     }
 
     processOption(args.toList)
@@ -43,11 +53,7 @@ object Main {
 
     val ctx = processOptions(args)
 
-    val pipeline = Lexer andThen Parser
-
     val program = pipeline.run(ctx)(ctx.file)
-
-
 
     println(Printer(program))
 
