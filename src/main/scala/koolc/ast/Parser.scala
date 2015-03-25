@@ -43,7 +43,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
     def parseGoal: Program = {
 
       val firstOfStatement = List(IDKIND, LBRACE, WHILE, IF, PRINTLN)
-      val firstOfExpression = List(STRLITKIND, INTLITKIND, TRUE, FALSE, IDKIND, NEW, BANG, LPAREN)
+      val firstOfExpression = List(STRLITKIND, INTLITKIND, TRUE, FALSE, IDKIND, NEW, BANG, LPAREN, THIS)
 
 
       def statDecl:StatTree = currentToken.kind match {
@@ -95,6 +95,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           val ifStatement = statDecl
           var elseStatement: Option[StatTree] = null
           if(currentToken.kind.equals(ELSE)){
+            readToken
             elseStatement = Option(statDecl)
           }
           If(expr, ifStatement, elseStatement)
@@ -227,6 +228,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         case NEW => {
           readToken
           if(currentToken.kind.equals(INT)){
+            readToken
             eat(LBRACKET)
             val expr = expression
             eat(RBRACKET)
@@ -274,7 +276,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           readToken
           val expr = expression
           eat(RBRACKET)
-          ArrayRead(exprIn, expr)
+          expressionP(ArrayRead(exprIn, expr))
         }
         case DOT =>{
           readToken
@@ -287,16 +289,21 @@ object Parser extends Pipeline[Iterator[Token], Program] {
             readToken
             eat(LPAREN)
             var args = List[ExprTree]()
-            while(firstOfExpression.contains(currentToken.kind)){
+            if(firstOfExpression.contains(currentToken.kind)){
               args = args ++ List(expression)
+              while(currentToken.kind.equals(COMMA)){
+                readToken
+                args = args ++ List(expression)
+              }
             }
+            eat(RPAREN)
             ret = MethodCall(exprIn, id, args)
 
           }else{
             expected(LENGTH, IDKIND)
           }
 
-          ret
+          expressionP(ret)
         }
         case _ => {
           exprIn
@@ -317,7 +324,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         readToken
         eat(COLON)
         val varType = typeDecl
-
+        eat(SEMICOLON)
         VarDecl(varType, id)
 
       }
@@ -337,6 +344,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           parList = parList++List(Formal(typeTree, id))
 
           while(currentToken.kind.equals(COMMA)){
+            readToken
             val id = findIdentifier
             readToken
 
@@ -400,7 +408,8 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         def findExtends: Option[Identifier] = {
           if(currentToken.kind.equals(EXTENDS)){
             eat(EXTENDS)
-            Option(Identifier(currentToken.toString))
+            Option(findIdentifier)
+            readToken
           }
           null
         }
