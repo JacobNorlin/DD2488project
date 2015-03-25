@@ -9,11 +9,102 @@ object Printer {
 
     val main = t.asInstanceOf[Program].main
 
-    sb.append("object "+main.id+" { \n")
+    var tabCounter = 0
+
+
+    sb.append("object "+main.id.value+" { \n")
     sb.append("\t def main() : Unit = { \n")
     printStatements(main.stats)
     sb.append("}\n")
     sb.append("}")
+
+    printClasses(t.asInstanceOf[Program].classes)
+
+    def startBlock = {
+      sb.append("{\n")
+      tabCounter = tabCounter + 1
+    }
+    def endBlock = {
+      sb.append("}\n")
+      tabCounter = tabCounter - 1
+    }
+
+    def addString(str: String) = {
+      val tabs = "\t"*tabCounter
+      sb.append(tabs+"str")
+    }
+
+    def printClasses(classDecls: List[ClassDecl]) = {
+      classDecls.map(classDecl => {
+        printClass(classDecl)
+      })
+    }
+
+    def printClass(classDecl: ClassDecl) = {
+      sb.append("class ")
+      sb.append(classDecl.id.value)
+      if(classDecl.parent != null){
+        sb.append(" extends ")
+        sb.append(classDecl.parent.get.value)
+      }
+      sb.append(" {\n")
+      printVars(classDecl.vars)
+      printMethods(classDecl.methods)
+      sb.append("\n}")
+
+
+
+    }
+
+    def printMethods(methodDecls: List[MethodDecl]) = {
+      methodDecls.map(method => {
+        printMethod(method)
+      })
+    }
+
+    def parseType(tpe:TypeTree): String = tpe match {
+      case IntType() => "Int"
+      case StringType() => "String"
+      case BooleanType() => "Boolean"
+      case IntArrayType() => "Int[]"
+      case _ => "NoSuchType"
+    }
+
+    def printMethod(method: MethodDecl): Unit ={
+      sb.append("def ")
+      sb.append(method.id.value)
+      sb.append(" (")
+      if(method.args.length != 0){
+        sb.append(method.args.head.id.value+" : "+parseType(method.args.head.tpe))
+        method.args.tail.map(x => {
+          sb.append(", "+x.id.value + " : " + parseType(x.tpe))
+        })
+      }
+      sb.append("): ")
+      sb.append(parseType(method.retType))
+      sb.append(" = {\n")
+      printVars(method.vars)
+      printStatements(method.stats)
+      sb.append("return ")
+      printExpression(method.retExpr)
+      sb.append(";\n}")
+
+    }
+
+    def printVars(varDecls: List[VarDecl]) = {
+      for(varDecl <- varDecls){
+        printVar(varDecl)
+        sb.append("\n")
+      }
+    }
+
+    def printVar(varDecl: VarDecl) = {
+      sb.append("var ")
+      sb.append(varDecl.id)
+      sb.append(" : ")
+      sb.append(parseType(varDecl.tpe))
+      sb.append(";")
+    }
 
 
     def printStatements(statements:List[StatTree]) = {
@@ -209,7 +300,7 @@ object Printer {
         }
         case Identifier(_) => {
           val idNode = expression.asInstanceOf[Identifier]
-          sb.append(idNode.value)
+            sb.append(idNode.value)
           ""
         }
         case This() => {

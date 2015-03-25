@@ -312,7 +312,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
 
       def findIdentifier: Identifier = {
         if(currentToken.kind.equals(IDKIND)){
-          Identifier(currentToken.toString)
+          Identifier(currentToken.asInstanceOf[ID].value)
         }else{
           expected(IDKIND)
         }
