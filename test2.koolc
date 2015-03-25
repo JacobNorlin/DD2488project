@@ -1,0 +1,23 @@
+[0m[[0minfo[0m] [0mSet current project to koolc (in build file:/home/jacob/KTH/Compiler/Project/DD2488Project/)[0m
+[0m[[0minfo[0m] [0mRunning koolc.Main test.koolc[0m
+object Factorial
+{
+	def main() : Unit =
+	{
+		println( ((1 + (2 * 3)) - (2 * 3)) );
+		
+	}
+	
+}
+class Fact
+{
+	def computeFactorial (num : Int): Int = 
+	{
+		return num;
+	}
+	
+	
+}
+
+
+[0m[[32msuccess[0m] [0mTotal time: 2 s, completed Mar 25, 2015 5:03:19 PM[0m
