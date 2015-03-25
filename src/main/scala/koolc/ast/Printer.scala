@@ -23,8 +23,8 @@ object Printer {
     }
 
     def printStatement(statement:StatTree):String = {
-      statement.getClass match {
-        case While => {
+      statement match {
+        case While(_,_) => {
           val whileNode = statement.asInstanceOf[While]
           sb.append("while( ")
           printExpression(whileNode.expr)
@@ -33,7 +33,7 @@ object Printer {
 
         }
 
-        case If => {
+        case If(_,_,_) => {
           val ifNode = statement.asInstanceOf[If]
           sb.append("if( ")
           printExpression(ifNode.expr)
@@ -47,7 +47,7 @@ object Printer {
           ""
         }
 
-        case Assign => {
+        case Assign(_,_) => {
           val assignNode = statement.asInstanceOf[Assign]
           sb.append(assignNode.id.value+" = ")
           printExpression(assignNode.expr)
@@ -55,7 +55,7 @@ object Printer {
           ""
         }
 
-        case Println => {
+        case Println(_) => {
           val printNode = statement.asInstanceOf[Println]
           sb.append("println( ")
           printExpression(printNode.expr)
@@ -63,7 +63,7 @@ object Printer {
           ""
         }
 
-        case ArrayAssign => {
+        case ArrayAssign(_,_,_) => {
           val arrayNode = statement.asInstanceOf[ArrayAssign]
           sb.append(arrayNode.id.value+"[")
           printExpression(arrayNode.index)
@@ -73,7 +73,7 @@ object Printer {
           ""
         }
 
-        case Block => {
+        case Block(_) => {
           val blockNode = statement.asInstanceOf[Block]
           sb.append("{\n")
           printStatements(blockNode.stats)
@@ -94,8 +94,8 @@ object Printer {
     }
 
     def printExpression(expression:ExprTree):String = {
-      expression.getClass match {
-        case Plus => {
+      expression match {
+        case Plus(_,_) => {
           val plusNode = expression.asInstanceOf[Plus]
           sb.append("(")
           sb.append(printExpression(plusNode.lhs))
@@ -104,7 +104,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case Minus => {
+        case Minus(_,_) => {
           val minusNode = expression.asInstanceOf[Minus]
           sb.append("(")
           sb.append(printExpression(minusNode.lhs))
@@ -113,7 +113,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case Times => {
+        case Times(_,_) => {
           val timesNode = expression.asInstanceOf[Times]
           sb.append("(")
           sb.append(printExpression(timesNode.lhs))
@@ -122,7 +122,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case Div => {
+        case Div(_,_) => {
           val divNode = expression.asInstanceOf[Div]
           sb.append("(")
           sb.append(printExpression(divNode.lhs))
@@ -131,7 +131,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case And => {
+        case And(_,_) => {
           val andNode = expression.asInstanceOf[And]
           sb.append("(")
           sb.append(printExpression(andNode.lhs))
@@ -140,7 +140,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case Or => {
+        case Or(_,_) => {
           val orNode = expression.asInstanceOf[Or]
           sb.append("(")
           sb.append(printExpression(orNode.lhs))
@@ -149,7 +149,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case LessThan => {
+        case LessThan(_,_) => {
           val ltNode = expression.asInstanceOf[LessThan]
           sb.append("(")
           sb.append(printExpression(ltNode.lhs))
@@ -158,7 +158,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case Equals => {
+        case Equals(_,_) => {
           val equalsNode = expression.asInstanceOf[Equals]
           sb.append("(")
           sb.append(printExpression(equalsNode.lhs))
@@ -167,7 +167,7 @@ object Printer {
           sb.append(")")
           ""
         }
-        case ArrayRead => {
+        case ArrayRead(_,_) => {
           val arNode = expression.asInstanceOf[ArrayRead]
           printExpression(arNode.arr)
           sb.append("[")
@@ -175,13 +175,13 @@ object Printer {
           sb.append("]")
           ""
         }
-        case ArrayLength => {
+        case ArrayLength(_) => {
           val alNode = expression.asInstanceOf[ArrayLength]
           printExpression(alNode.arr)
           sb.append(".length")
           ""
         }
-        case MethodCall => {
+        case MethodCall(_,_,_) => {
           val mcNode = expression.asInstanceOf[MethodCall]
           printExpression(mcNode.obj)
           sb.append("."+mcNode.meth.value+"( ")
@@ -189,46 +189,46 @@ object Printer {
           sb.append(" );")
           ""
         }
-        case IntLit => {
+        case IntLit(_) => {
           val intNode = expression.asInstanceOf[IntLit]
-          sb.append(intNode.value
+          sb.append(intNode.value)
           ""
         }
-        case StringLit => {
+        case StringLit(_) => {
           val strNode = expression.asInstanceOf[StringLit]
           sb.append(strNode.value)
           ""
         }
-        case True => {
+        case True() => {
           sb.append("true")
           ""
         }
-        case False => {
+        case False() => {
           sb.append("false")
           ""
         }
-        case Identifier => {
+        case Identifier(_) => {
           val idNode = expression.asInstanceOf[Identifier]
           sb.append(idNode.value)
           ""
         }
-        case This => {
+        case This() => {
           sb.append("this")
           ""
         }
-        case NewIntArray => {
+        case NewIntArray(_) => {
           val niaNode = expression.asInstanceOf[NewIntArray]
           sb.append("new int[")
           printExpression(niaNode.size)
           sb.append("]")
           ""
         }
-        case New =>{
+        case New(_) =>{
           val newNode = expression.asInstanceOf[New]
           sb.append("new "+newNode.tpe.value+"()")
           ""
         }
-        case Not => {
+        case Not(_) => {
           val notNode = expression.asInstanceOf[Not]
           sb.append("!")
           printExpression(notNode.expr)
@@ -239,20 +239,20 @@ object Printer {
 
     }
 
-    def printType(nodeType: TypeTree) = nodeType.getClass match {
-      case IntType => {
+    def printType(nodeType: TypeTree) = nodeType match {
+      case IntType() => {
         sb.append("Int")
       }
-      case BooleanType => {
+      case BooleanType() => {
         sb.append("Bool")
       }
-      case StringType => {
+      case StringType() => {
         sb.append("String")
       }
-      case IntArrayType => {
+      case IntArrayType() => {
         sb.append("Int[]")
       }
-      case Identifier => {
+      case Identifier(_) => {
         val idNode = nodeType.asInstanceOf[Identifier]
         sb.append(idNode.value)
       }
