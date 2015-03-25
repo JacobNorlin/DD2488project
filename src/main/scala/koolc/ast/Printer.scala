@@ -227,7 +227,7 @@ object Printer {
           val divNode = expression.asInstanceOf[Div]
           sb.append("(")
           sb.append(printExpression(divNode.lhs))
-          sb.append(" * ")
+          sb.append(" / ")
           sb.append(printExpression(divNode.rhs))
           sb.append(")")
           ""
