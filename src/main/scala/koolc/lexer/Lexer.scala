@@ -16,7 +16,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
       case "class" => Tokens.CLASS
       case "def" => Tokens.DEF
       case "var" => Tokens.VAR
-      case "unit" => Tokens.UNIT
+      case "Unit" => Tokens.UNIT
       case "main" => Tokens.MAIN
       case "string" => Tokens.STRING
       case "extends" => Tokens.EXTENDS
