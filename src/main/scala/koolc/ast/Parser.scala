@@ -135,8 +135,9 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           StringType()
         }
         case IDKIND => {
+          var returnType: TypeTree = findIdentifier
           readToken
-          findIdentifier
+          returnType
         }
         case _ => {
           expected(INT, BOOLEAN, STRING, IDKIND)
@@ -372,7 +373,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         var varList = List[VarDecl]()
         var statList = List[StatTree]()
 
-        while(currentToken == VAR){
+        while(currentToken.kind.equals(VAR)){
           varList = varList++List(varDecl)
         }
 
@@ -397,7 +398,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         readToken
 
         def findExtends: Option[Identifier] = {
-          if(currentToken == EXTENDS){
+          if(currentToken.kind.equals(EXTENDS)){
             eat(EXTENDS)
             Option(Identifier(currentToken.toString))
           }
@@ -406,18 +407,18 @@ object Parser extends Pipeline[Iterator[Token], Program] {
 
         val ext = findExtends
 
-        eat(RBRACE)
+        eat(LBRACE)
 
         var varList = List[VarDecl]()
         var methodList = List[MethodDecl]()
 
-        while(currentToken == VAR){
+        while(currentToken.kind.equals(VAR)){
           varList = varList++List(varDecl)
         }
-        while(currentToken == DEF){
+        while(currentToken.kind.equals(DEF)){
           methodList = methodList++List(methodDecl)
         }
-
+        eat(RBRACE)
         ClassDecl(id, ext, varList, methodList)
       }
 
