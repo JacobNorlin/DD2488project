@@ -142,25 +142,89 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           expected(INT, BOOLEAN, STRING, IDKIND)
         }
       }
-      def expression: ExprTree = currentToken.kind match{
-        case INTLITKIND => {
-          val ret = IntLit(currentToken.asInstanceOf[INTLIT].value)
+      
+      def expression : ExprTree = {
+        var ret:ExprTree = null
+        ret = expr1
+        while(currentToken.kind.equals(OR)) {
           readToken
-          expressionP(ret)
+          ret = Or(ret, expr1)
+        }
+        ret
+      }
+      
+      def expr1 : ExprTree = {
+        var ret:ExprTree = null
+        ret = expr2
+        while(currentToken.kind.equals(AND)) {
+          readToken
+          ret = And(ret, expr2)
+        }
+        ret
+      }
+      
+      def expr2 : ExprTree = {
+        var ret:ExprTree = null
+        ret = expr3
+        while(currentToken.kind.equals(EQUALS)||currentToken.kind.equals(LESSTHAN)) {
+          if(currentToken.kind.equals(EQUALS)) {
+            readToken
+            ret = Equals(ret, expr3)
+          } else {
+            readToken
+            ret = LessThan(ret, expr3)
+          }
+        }
+        ret
+      }
+      
+      def expr3 : ExprTree = {
+        var ret:ExprTree = null
+        ret = expr4
+        while(currentToken.kind.equals(PLUS)||currentToken.kind.equals(MINUS)) {
+          if(currentToken.kind.equals(PLUS)) {
+            readToken
+            ret = Plus(ret, expr4)
+          } else {
+            readToken
+            ret = Minus(ret, expr4)
+          }
+        }
+        ret
+      }
+      
+      def expr4 : ExprTree = {
+        var ret:ExprTree = null
+        ret = expr5
+        while(currentToken.kind.equals(TIMES)||currentToken.kind.equals(DIV)) {
+          if(currentToken.kind.equals(TIMES)) {
+            readToken
+            ret = Times(ret, expr5)
+          } else {
+            readToken
+            ret = Div(ret, expr5)
+          }
+        }
+        ret
+      }
+      
+      def expr5 : ExprTree = {
+        var ret : ExprTree = null
+        currentToken.kind match{
+        case INTLITKIND => {
+          ret = IntLit(currentToken.asInstanceOf[INTLIT].value)
+          readToken
         }
         case STRLITKIND => {
-          val ret = StringLit(currentToken.asInstanceOf[STRLIT].value)
+          ret = StringLit(currentToken.asInstanceOf[STRLIT].value)
           readToken
-          ret
         }
         case IDKIND => {
-          val ret = findIdentifier
+          ret = findIdentifier
           readToken
-          ret
         }
         case NEW => {
           readToken
-          var ret:ExprTree = null
           if(currentToken.kind.equals(INT)){
             eat(LBRACKET)
             val expr = expression
@@ -175,32 +239,35 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           }else{
             expected(INT, IDKIND)
           }
-          ret
         }
         case BANG => {
           readToken
-          Not(expression)
+          ret = Not(expression)
         }
         case LPAREN => {
-          val expr = expression
+          readToken
+          ret = expression
           eat(RPAREN)
-          expr
         }
         case TRUE => {
           readToken
-          True()
+          ret = True()
         }
         case FALSE => {
           readToken
-          False()
+          ret = False()
         }
         case THIS => {
           readToken
-          This()
+          ret = This()
         }
-
+        case _ => {
+          expected(STRLITKIND, INTLITKIND, TRUE, FALSE, IDKIND, NEW, BANG, LPAREN)
+        }
       }
-
+        expressionP(ret)
+      }
+      
       def expressionP(exprIn:ExprTree): ExprTree = currentToken.kind match {
         case LBRACKET => {
           readToken
@@ -230,20 +297,6 @@ object Parser extends Pipeline[Iterator[Token], Program] {
 
           ret
         }
-        case PLUS | MINUS | TIMES | DIV => {
-          var ret: ExprTree = null
-          def term(f1:ExprTree, f2:ExprTree) = {
-            if(currentToken.kind.equals(PLUS)){
-              Plus(f1, f2)
-            }else if()
-          }
-
-          def factor(t1:ExprTree, t2:ExprTree) = {
-
-
-          }
-        }
-
         case _ => {
           exprIn
         }
