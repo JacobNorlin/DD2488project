@@ -151,9 +151,12 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           } //INT LITERALS
           else if (currentChar.isDigit) {
             var k = 0
-
-            while (currentChar.isDigit) {
-              k = 10 * k + currentChar.toString.toInt
+            if(currentChar.toString.toInt != 0){
+              while (currentChar.isDigit) {
+                k = 10 * k + currentChar.toString.toInt
+                currentChar = readNextChar
+              }
+            }else{
               currentChar = readNextChar
             }
             returnToken = new INTLIT(k)

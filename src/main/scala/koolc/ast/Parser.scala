@@ -201,7 +201,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         while(currentToken.kind.equals(TIMES)||currentToken.kind.equals(DIV)) {
           if(currentToken.kind.equals(TIMES)) {
             readToken
-            ret = Times(ret, expr5)
+            ret = Times(ret, expr5).setPos(ret)
           } else {
             readToken
             ret = Div(ret, expr5)
@@ -214,19 +214,20 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         var ret : ExprTree = null
         currentToken.kind match{
         case INTLITKIND => {
-          ret = IntLit(currentToken.asInstanceOf[INTLIT].value)
+          ret = IntLit(currentToken.asInstanceOf[INTLIT].value).setPos(currentToken)
           readToken
         }
         case STRLITKIND => {
-          ret = StringLit(currentToken.asInstanceOf[STRLIT].value)
+          ret = StringLit(currentToken.asInstanceOf[STRLIT].value).setPos(currentToken)
           readToken
         }
         case IDKIND => {
-          ret = findIdentifier
+          ret = findIdentifier.setPos(currentToken)
           readToken
         }
         case NEW => {
           readToken
+          val pos = currentToken
           if(currentToken.kind.equals(INT)){
             readToken
             eat(LBRACKET)
@@ -242,27 +243,33 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           }else{
             expected(INT, IDKIND)
           }
+          ret.setPos(pos)
         }
         case BANG => {
+          val pos = currentToken
           readToken
-          ret = Not(expression)
+          ret = Not(expression).setPos(pos)
         }
         case LPAREN => {
+          val pos = currentToken
           readToken
-          ret = expression
+          ret = expression.setPos(pos)
           eat(RPAREN)
         }
         case TRUE => {
+          val pos = currentToken
           readToken
-          ret = True()
+          ret = True().setPos(pos)
         }
         case FALSE => {
+          val pos = currentToken
           readToken
-          ret = False()
+          ret = False().setPos(pos)
         }
         case THIS => {
+          val pos = currentToken
           readToken
-          ret = This()
+          ret = This().setPos(pos)
         }
         case _ => {
           expected(STRLITKIND, INTLITKIND, TRUE, FALSE, IDKIND, NEW, BANG, LPAREN)
@@ -312,7 +319,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
 
       def findIdentifier: Identifier = {
         if(currentToken.kind.equals(IDKIND)){
-          Identifier(currentToken.asInstanceOf[ID].value)
+          Identifier(currentToken.asInstanceOf[ID].value).setPos(currentToken)
         }else{
           expected(IDKIND)
         }
@@ -428,7 +435,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           methodList = methodList++List(methodDecl)
         }
         eat(RBRACE)
-        ClassDecl(id, ext, varList, methodList)
+        ClassDecl(id, ext, varList, methodList).setPos(id)
       }
 
       def mainDecl = {
@@ -455,7 +462,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         eat(RBRACE)
         eat(RBRACE)
 
-        MainObject(id, statList)
+        MainObject(id, statList).setPos(id)
       }
 
       val mainObject = mainDecl
