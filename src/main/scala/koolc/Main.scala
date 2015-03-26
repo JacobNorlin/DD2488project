@@ -55,6 +55,8 @@ object Main {
 
     val program = pipeline.run(ctx)(ctx.file)
 
+    program.
+
     println(Printer(program))
 
 

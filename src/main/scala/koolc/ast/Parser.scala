@@ -477,7 +477,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         classList = classList ++ List(classDecl)
       }
       eat(EOF)
-      Program(mainObject, classList)
+      Program(mainObject, classList).setPos(mainObject)
 
     }
 
