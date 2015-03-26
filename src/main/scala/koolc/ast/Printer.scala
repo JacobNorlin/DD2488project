@@ -14,6 +14,7 @@ object Printer {
 
     sb.append("object "+main.id.value)
     startBlock
+    putTabs
     sb.append("def main() : Unit =")
     startBlock
     printStatements(main.stats)
@@ -21,29 +22,27 @@ object Printer {
     endBlock
 
     printClasses(t.asInstanceOf[Program].classes)
+    
+    def putTabs = {
+      val tabs = "\t"*tabCounter
+      sb.append(tabs)
+    }
 
     def startBlock = {
-      sb.append(" {")
+      sb.append(" {\n")
       tabCounter += 1
-      addNewLine
 
     }
     def endBlock = {
       tabCounter -= 1
-      addNewLine
-      sb.append("}")
-      addNewLine
-    }
-
-    def addNewLine = {
-      val tabs = "\t"*tabCounter
-      sb.append("\n")
-      sb.append(tabs)
+      putTabs
+      sb.append("}\n")
     }
 
     def printClasses(classDecls: List[ClassDecl]) = {
       classDecls.map(classDecl => {
         printClass(classDecl)
+        putTabs
       })
     }
 
@@ -62,6 +61,7 @@ object Printer {
 
     def printMethods(methodDecls: List[MethodDecl]) = {
       methodDecls.map(method => {
+        putTabs
         printMethod(method)
       })
     }
@@ -90,14 +90,16 @@ object Printer {
       startBlock
       printVars(method.vars)
       printStatements(method.stats)
+      putTabs
       sb.append("return ")
       printExpression(method.retExpr)
-      sb.append(";")
+      sb.append(";\n")
       endBlock
     }
 
     def printVars(varDecls: List[VarDecl]) = {
       varDecls.map(varDecl => {
+        putTabs
         printVar(varDecl)
       })
     }
@@ -107,13 +109,13 @@ object Printer {
       sb.append(varDecl.id.value)
       sb.append(" : ")
       sb.append(parseType(varDecl.tpe))
-      sb.append(";")
-      addNewLine
+      sb.append(";\n")
     }
 
 
     def printStatements(statements:List[StatTree]) = {
       statements.map(statement => {
+        putTabs
         printStatement(statement)
       })
     }
@@ -126,7 +128,7 @@ object Printer {
           printExpression(whileNode.expr)
           sb.append(" ) ")
           printStatement(whileNode.stat)
-
+          ""
         }
 
         case If(_,_,_) => {
@@ -146,8 +148,7 @@ object Printer {
           val assignNode = statement.asInstanceOf[Assign]
           sb.append(assignNode.id.value+" = ")
           printExpression(assignNode.expr)
-          sb.append(";")
-          addNewLine
+          sb.append(";\n")
           ""
         }
 
@@ -155,8 +156,7 @@ object Printer {
           val printNode = statement.asInstanceOf[Println]
           sb.append("println( ")
           printExpression(printNode.expr)
-          sb.append(" );")
-          addNewLine
+          sb.append(" );\n")
           ""
         }
 
@@ -166,8 +166,7 @@ object Printer {
           printExpression(arrayNode.index)
           sb.append("] = ")
           printExpression(arrayNode.expr)
-          sb.append(";")
-          addNewLine
+          sb.append(";\n")
           ""
         }
 
