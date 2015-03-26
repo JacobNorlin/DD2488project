@@ -1,11 +1,13 @@
 object Factorial {
-    def main() : Unit = {
-        a = (a+b)*3;
-    }
+	def main() : Unit = {
+		a = ((a + b) * 3);
+		
+	}
+	
 }
-
 class Fact {
-    def computeFactorial(num : Int) : Int = {
-        return num;
-    }
+	def computeFactorial (num : Int) : Int =  {
+		return num;
+	}
+	
 }
