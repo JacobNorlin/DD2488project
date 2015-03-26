@@ -1,0 +1,28 @@
+[0m[[0minfo[0m] [0mSet current project to koolc (in build file:/home/jacob/KTH/Compiler/DD2488Project/)[0m
+[0m[[0minfo[0m] [0mCompiling 1 Scala source to /home/jacob/KTH/Compiler/DD2488Project/target/scala-2.11/classes...[0m
+[0m[[0minfo[0m] [0mRunning koolc.Main testprograms/lab3/valid/Life.kool[0m
+[0m[[31merror[0m] [0m(run-main-0) java.util.NoSuchElementException: head of empty list[0m
+java.util.NoSuchElementException: head of empty list
+	at scala.collection.immutable.Nil$.head(List.scala:420)
+	at scala.collection.immutable.Nil$.head(List.scala:417)
+	at koolc.ast.Printer$.printMethodCallArguments$1(Printer.scala:187)
+	at koolc.ast.Printer$.koolc$ast$Printer$$printExpression$1(Printer.scala:290)
+	at koolc.ast.Printer$.koolc$ast$Printer$$printExpression$1(Printer.scala:288)
+	at koolc.ast.Printer$.koolc$ast$Printer$$printStatement$1(Printer.scala:158)
+	at koolc.ast.Printer$$anonfun$printStatements$1$1.apply(Printer.scala:119)
+	at koolc.ast.Printer$$anonfun$printStatements$1$1.apply(Printer.scala:117)
+	at scala.collection.immutable.List.map(List.scala:272)
+	at koolc.ast.Printer$.printStatements$1(Printer.scala:117)
+	at koolc.ast.Printer$.apply(Printer.scala:20)
+	at koolc.Main$.main(Main.scala:59)
+	at koolc.Main.main(Main.scala)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:606)
+[0m[[31mtrace[0m] [0mStack trace suppressed: run [34mlast compile:run[0m for the full output.[0m
+java.lang.RuntimeException: Nonzero exit code: 1
+	at scala.sys.package$.error(package.scala:27)
+[0m[[31mtrace[0m] [0mStack trace suppressed: run [34mlast compile:run[0m for the full output.[0m
+[0m[[31merror[0m] [0m(compile:[31mrun[0m) Nonzero exit code: 1[0m
+[0m[[31merror[0m] [0mTotal time: 13 s, completed Mar 26, 2015 3:32:25 PM[0m

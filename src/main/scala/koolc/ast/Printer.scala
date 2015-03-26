@@ -138,6 +138,7 @@ object Printer {
           sb.append(" ) ")
           printStatement(ifNode.thn)
           if(ifNode.els != null){
+            putTabs
             sb.append("else ")
             printStatement(ifNode.els.get)
           }
@@ -181,13 +182,23 @@ object Printer {
 
     }
 
-    def printExpressions(expressions:List[ExprTree]) = {
+    def printMethodCallArguments(args:List[ExprTree]) = {
+      if(args.length != 0){
+        printExpression(args.head)
+        if(args.length != 1){
+          for(arg <- args.tail){
+            sb.append(", ")
+            printExpression(arg)
+          }
+        }
 
-      for(expression <- expressions){
-        printExpression(expression)
+
       }
 
+
     }
+
+
 
     def printExpression(expression:ExprTree):String = {
       expression match {
@@ -281,8 +292,8 @@ object Printer {
           val mcNode = expression.asInstanceOf[MethodCall]
           printExpression(mcNode.obj)
           sb.append("."+mcNode.meth.value+"( ")
-          printExpressions(mcNode.args)
-          sb.append(" );")
+          printMethodCallArguments(mcNode.args)
+          sb.append(" )")
           ""
         }
         case IntLit(_) => {
@@ -314,7 +325,7 @@ object Printer {
         }
         case NewIntArray(_) => {
           val niaNode = expression.asInstanceOf[NewIntArray]
-          sb.append("new int[")
+          sb.append("new Int[")
           printExpression(niaNode.size)
           sb.append("]")
           ""

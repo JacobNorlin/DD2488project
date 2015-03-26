@@ -54,7 +54,7 @@ object Main {
     val ctx = processOptions(args)
 
     val program = pipeline.run(ctx)(ctx.file)
-    
+
 
     println(Printer(program))
 
