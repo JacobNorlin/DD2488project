@@ -59,13 +59,13 @@ object Parser extends Pipeline[Iterator[Token], Program] {
             val expr2 = expression
             eat(SEMICOLON)
 
-            ret = ArrayAssign(id, expr1, expr2)
+            ret = ArrayAssign(id, expr1, expr2).setPos(id)
 
           }else if(currentToken.kind.equals(EQSIGN)){
             readToken
             val expr = expression
             eat(SEMICOLON)
-            ret = Assign(id, expr)
+            ret = Assign(id, expr).setPos(id)
           }else{
             expected(EQSIGN, RBRACKET)
           }
@@ -77,7 +77,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           eat(LPAREN)
           val expr = expression
           eat(RPAREN)
-          While(expr, statDecl)
+          While(expr, statDecl).setPos(expr)
         }
         case PRINTLN => {
           readToken
@@ -85,7 +85,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           val expr = expression
           eat(RPAREN)
           eat(SEMICOLON)
-          Println(expr)
+          Println(expr).setPos(expr)
         }
         case IF => {
           readToken
@@ -98,7 +98,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
             readToken
             elseStatement = Option(statDecl)
           }
-          If(expr, ifStatement, elseStatement)
+          If(expr, ifStatement, elseStatement).setPos(expr)
         }
         case LBRACE => {
           readToken
@@ -107,7 +107,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
             statList = statList++List(statDecl)
           }
           eat(RBRACE)
-          Block(statList)
+          Block(statList).setPos(statList.head)
         }
         case _ => {
           expected(IF, WHILE, PRINTLN, LBRACE, IDKIND)
@@ -115,33 +115,37 @@ object Parser extends Pipeline[Iterator[Token], Program] {
       }
 
 
-      def typeDecl: TypeTree = currentToken.kind match {
-        case INT => {
-          readToken
+      def typeDecl: TypeTree = {
+        val pos = currentToken
+        currentToken.kind match {
+          case INT => {
 
-          var returnType: TypeTree = IntType()
-          if(currentToken.kind.equals(LBRACKET)){
             readToken
-            eat(RBRACKET)
-            returnType = IntArrayType()
+
+            var returnType: TypeTree = IntType()
+            if(currentToken.kind.equals(LBRACKET)){
+              readToken
+              eat(RBRACKET)
+              returnType = IntArrayType().setPos(pos)
+            }
+            returnType
           }
-          returnType
-        }
-        case BOOLEAN => {
-          readToken
-          BooleanType()
-        }
-        case STRING => {
-          readToken
-          StringType()
-        }
-        case IDKIND => {
-          var returnType: TypeTree = findIdentifier
-          readToken
-          returnType
-        }
-        case _ => {
-          expected(INT, BOOLEAN, STRING, IDKIND)
+          case BOOLEAN => {
+            readToken
+            BooleanType().setPos(pos)
+          }
+          case STRING => {
+            readToken
+            StringType().setPos(pos)
+          }
+          case IDKIND => {
+            val returnType: TypeTree = findIdentifier
+            readToken
+            returnType
+          }
+          case _ => {
+            expected(INT, BOOLEAN, STRING, IDKIND)
+          }
         }
       }
       
@@ -150,7 +154,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         ret = expr1
         while(currentToken.kind.equals(OR)) {
           readToken
-          ret = Or(ret, expr1)
+          ret = Or(ret, expr1).setPos(ret)
         }
         ret
       }
@@ -160,7 +164,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         ret = expr2
         while(currentToken.kind.equals(AND)) {
           readToken
-          ret = And(ret, expr2)
+          ret = And(ret, expr2).setPos(ret)
         }
         ret
       }
@@ -171,10 +175,10 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         while(currentToken.kind.equals(EQUALS)||currentToken.kind.equals(LESSTHAN)) {
           if(currentToken.kind.equals(EQUALS)) {
             readToken
-            ret = Equals(ret, expr3)
+            ret = Equals(ret, expr3).setPos(ret)
           } else {
             readToken
-            ret = LessThan(ret, expr3)
+            ret = LessThan(ret, expr3).setPos(ret)
           }
         }
         ret
@@ -186,10 +190,10 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         while(currentToken.kind.equals(PLUS)||currentToken.kind.equals(MINUS)) {
           if(currentToken.kind.equals(PLUS)) {
             readToken
-            ret = Plus(ret, expr4)
+            ret = Plus(ret, expr4).setPos(ret)
           } else {
             readToken
-            ret = Minus(ret, expr4)
+            ret = Minus(ret, expr4).setPos(ret)
           }
         }
         ret
@@ -204,7 +208,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
             ret = Times(ret, expr5).setPos(ret)
           } else {
             readToken
-            ret = Div(ret, expr5)
+            ret = Div(ret, expr5).setPos(ret)
           }
         }
         ret
@@ -283,13 +287,13 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           readToken
           val expr = expression
           eat(RBRACKET)
-          expressionP(ArrayRead(exprIn, expr))
+          expressionP(ArrayRead(exprIn, expr).setPos(exprIn))
         }
         case DOT =>{
           readToken
           var ret:ExprTree = null
           if(currentToken.kind.equals(LENGTH)){
-            ret = ArrayLength(exprIn)
+            ret = ArrayLength(exprIn).setPos(exprIn)
             readToken
           }else if(currentToken.kind.equals((IDKIND))){
             val id = findIdentifier
@@ -304,7 +308,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
               }
             }
             eat(RPAREN)
-            ret = MethodCall(exprIn, id, args)
+            ret = MethodCall(exprIn, id, args).setPos(id)
 
           }else{
             expected(LENGTH, IDKIND)
@@ -332,7 +336,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         eat(COLON)
         val varType = typeDecl
         eat(SEMICOLON)
-        VarDecl(varType, id)
+        VarDecl(varType, id).setPos(id)
 
       }
 
@@ -358,7 +362,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
             eat(COLON)
             val typeTree = typeDecl
 
-            parList = parList++List(Formal(typeTree, id))
+            parList = parList++List(Formal(typeTree, id).setPos(id))
           }
 
           returnValue = parList
@@ -403,7 +407,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         eat(SEMICOLON)
         eat(RBRACE)
 
-        MethodDecl(retType, id, parList, varList, statList, expr)
+        MethodDecl(retType, id, parList, varList, statList, expr).setPos(id)
 
       }
 
