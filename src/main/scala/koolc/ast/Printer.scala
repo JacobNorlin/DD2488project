@@ -109,7 +109,7 @@ object Printer {
 
     def printVar(varDecl: VarDecl) = {
       sb.append("var ")
-      sb.append(varDecl.id)
+      sb.append(varDecl.id.value)
       sb.append(" : ")
       sb.append(parseType(varDecl.tpe))
       sb.append(";")
