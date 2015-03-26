@@ -1,6 +1,6 @@
 object Factorial {
     def main() : Unit = {
-        a = 0000;
+        a = a/b;
     }
 }
 

@@ -64,6 +64,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
         val currentWord = new StringBuffer()
         var divFound = false
         var returnToken: Token = new Token(Tokens.BAD)
+        var pos = source.pos
 
         //COMMENTS
         var continue = false;
@@ -79,6 +80,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
 
           //COMMENTS
           if (currentChar.equals('/')) {
+            pos = source.pos
             currentChar = readNextChar
             if (currentChar.equals('/')) {
               //Normal comment
@@ -103,6 +105,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
               continue = true
             } else {
               // Only the '/' char, means return DIVISION token
+
               returnToken = new Token(Tokens.DIV)
               divFound = true
             }
@@ -111,8 +114,13 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
             continue = false
           }
         } while (continue);
+
+
+
+
         //KEYWORDS AND IDENTIFIERS
         if (!divFound) {
+          pos = source.pos
           if (currentChar.isLetter) {
             currentWord.append(currentChar)
             currentChar = readNextChar
@@ -216,7 +224,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
           }
         }
 
-        returnToken.setPos(ctx.file, source.pos)
+        returnToken.setPos(ctx.file, pos)
         returnToken
 
       }
