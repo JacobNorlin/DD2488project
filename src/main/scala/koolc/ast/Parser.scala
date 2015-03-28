@@ -294,8 +294,8 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           expressionP(ArrayRead(exprIn, expr).setPos(exprIn))
         }
         case DOT =>{
-          val pos = currentToken
           readToken
+          val pos = currentToken //It makes more sense to take the keyword over the DOT for position
           var ret:ExprTree = null
           if(currentToken.kind.equals(LENGTH)){
             ret = ArrayLength(exprIn).setPos(pos)
