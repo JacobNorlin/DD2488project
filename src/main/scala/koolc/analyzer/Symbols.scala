@@ -37,11 +37,13 @@ object Symbols {
     var mainClass: ClassSymbol = _
     var classes = Map[String,ClassSymbol]()
 
+
     def lookupClass(n: String): Option[ClassSymbol] = {
-      val c = classes.find({case (k,v) => k==n}).get
-      var r:Option[ClassSymbol] = null
-      if(c != null)
-        r = Option(c._2)
+      val c = classes.getOrElse(n, None)
+      var r:Option[ClassSymbol] = None
+      if(c != None){
+        r = Some(c.asInstanceOf[ClassSymbol])
+      }
       r
     }
   }
@@ -52,21 +54,21 @@ object Symbols {
     var members = Map[String,VariableSymbol]()
 
     def lookupMethod(n: String): Option[MethodSymbol] = {
-      val m = methods.find({case (k,v) => k==n}).get
-      var r:Option[MethodSymbol] = null
-      if(m != null)
-        r = Option(m._2)
+      val m = methods.getOrElse(n, None)
+      var r:Option[MethodSymbol] = None
+      if(m == None)
+        r = Option(parent.get.lookupMethod(n).orNull)
       else
-        r = parent.get.lookupMethod(n)
+        r = Some(m.asInstanceOf[MethodSymbol])
       r
     }
     def lookupVar(n: String): Option[VariableSymbol] = {
-      val m = members.find({case (k,v) => k==n}).get
-      var r:Option[VariableSymbol] = null
-      if(m != null)
-        r = Option(m._2)
-      else
-        r = parent.get.lookupVar(n)
+      val m = members.getOrElse(n, None)
+      var r:Option[VariableSymbol] = None
+      if(m != None)
+        r = Some(m.asInstanceOf[VariableSymbol])
+      else if(parent != None)
+        r = Option(parent.get.lookupVar(n).orNull)
       r
     }
   }
@@ -78,19 +80,18 @@ object Symbols {
     var overridden : Option[MethodSymbol] = None
 
     def lookupVar(n: String): Option[VariableSymbol] = {
-      val p = params.find({case (k,v) => k==n}).get
-      val m = members.find({case (k,v) => k==n}).get
+      val p = params.getOrElse(n, None)
+      val m = members.getOrElse(n, None)
+      //println("Looking up: "+n+" found: ",p,m,params)
+      var r: Option[VariableSymbol] = None
 
-      var r:Option[VariableSymbol] = null
-
-      if (p == null)
-        r = Option(m._2)
-      else if(m == null)
-        r = Option(p._2)
+      if(p != None)
+        r = Some(p.asInstanceOf[VariableSymbol])
+      else if(m != None)
+        r = Some(m.asInstanceOf[VariableSymbol])
       else
         r = classSymbol.lookupVar(n)
       r
-
     }
   }
 

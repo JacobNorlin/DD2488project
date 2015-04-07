@@ -98,7 +98,7 @@ class ReferenceTest {
     shape1 = new Shape().init("1");
     shape2 = new Shape().init("2");
     unit = this.swapShape(shape1, shape2);
-    println("shape1: " + shape1.getColor());
+    println("shape1: " + 	shape1.getColor());
     println("shape2: " + shape2.getColor());
     unit = this.resetShape(shape1, shape2);
     println("shape1new: " + shape1.getColor());
@@ -197,10 +197,12 @@ class Shape {
 
 class Rectangle extends Shape {
   var x : Int;
+  var x : Int;
   var y : Int;
   
   def initRectangle(c: String, a: Int, b: Int) : Rectangle = {
     var unit: Shape;
+    var x : Int;
     x = a;
     y = b;
     unit = this.init(c);

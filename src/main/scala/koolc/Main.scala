@@ -1,5 +1,6 @@
 package koolc
 
+import koolc.analyzer.NameAnalysis
 import utils._
 import java.io.File
 
@@ -8,7 +9,7 @@ import ast._
 
 object Main {
 
-  var pipeline = Lexer andThen Parser
+  var pipeline = Lexer andThen Parser andThen NameAnalysis
 
   def processOptions(args: Array[String]): Context = {
 

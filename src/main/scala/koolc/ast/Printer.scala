@@ -12,7 +12,8 @@ object Printer {
     var tabCounter = 0
 
 
-    sb.append("object "+main.id.value)
+    sb.append("object ")
+    printIdentifier(main.id)
     startBlock
     putTabs
     sb.append("def main() : Unit =")
@@ -48,7 +49,7 @@ object Printer {
 
     def printClass(classDecl: ClassDecl) = {
       sb.append("class ")
-      sb.append(classDecl.id.value)
+      printIdentifier(classDecl.id)
       if(classDecl.parent != null){
         sb.append(" extends ")
         sb.append(classDecl.parent.get.value)
@@ -77,12 +78,15 @@ object Printer {
 
     def printMethod(method: MethodDecl): Unit ={
       sb.append("def ")
-      sb.append(method.id.value)
+      printIdentifier(method.id)
       sb.append(" (")
       if(method.args != null){
-        sb.append(method.args.head.id.value+" : "+parseType(method.args.head.tpe))
+        printIdentifier(method.args.head.id)
+        sb.append(" : "+parseType(method.args.head.tpe))
         method.args.tail.map(x => {
-          sb.append(", "+x.id.value + " : " + parseType(x.tpe))
+          sb.append(", ")
+          printIdentifier(x.id)
+          sb.append(" : " + parseType(x.tpe))
         })
       }
       sb.append(") : ")
@@ -106,7 +110,7 @@ object Printer {
 
     def printVar(varDecl: VarDecl) = {
       sb.append("var ")
-      sb.append(varDecl.id.value)
+      printIdentifier(varDecl.id)
       sb.append(" : ")
       sb.append(parseType(varDecl.tpe))
       sb.append(";\n")
@@ -147,7 +151,9 @@ object Printer {
 
         case Assign(_,_) => {
           val assignNode = statement.asInstanceOf[Assign]
-          sb.append(assignNode.id.value+" = ")
+
+          printIdentifier(assignNode.id)
+          sb.append(" = ")
           printExpression(assignNode.expr)
           sb.append(";\n")
           ""
@@ -163,7 +169,8 @@ object Printer {
 
         case ArrayAssign(_,_,_) => {
           val arrayNode = statement.asInstanceOf[ArrayAssign]
-          sb.append(arrayNode.id.value+"[")
+          printIdentifier(arrayNode.id)
+          sb.append("[")
           printExpression(arrayNode.index)
           sb.append("] = ")
           printExpression(arrayNode.expr)
@@ -180,6 +187,11 @@ object Printer {
         }
       }
 
+    }
+
+    def printIdentifier(id: Identifier) = {
+      println(id+"#"+id.getSymbol.id)
+      sb.append(id.value+"#"+id.getSymbol.id);
     }
 
     def printMethodCallArguments(args:List[ExprTree]) = {
@@ -316,7 +328,7 @@ object Printer {
         }
         case Identifier(_) => {
           val idNode = expression.asInstanceOf[Identifier]
-            sb.append(idNode.value)
+            printIdentifier(idNode)
           ""
         }
         case This() => {
