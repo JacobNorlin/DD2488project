@@ -82,7 +82,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
           val vSym = new VariableSymbol(v.id.value)
           v.setSymbol(vSym)
           v.id.setSymbol(vSym)
-          
+
           metSym.members = metSym.members + (vSym.name -> vSym)
         }
       }
@@ -99,16 +99,18 @@ object NameAnalysis extends Pipeline[Program, Program] {
         matchExpression(m.retExpr, m.getSymbol)
         }
       }
+
     def matchStatement(statement: StatTree, m: MethodSymbol): Boolean = {
       statement match {
-        case If(_,_,_) => val ifStmt = statement.asInstanceOf[If]
-          matchExpression(ifStmt.expr, m)
-          matchStatement(ifStmt.thn, m)
-        case While(_,_) => val whileStmt = statement.asInstanceOf[While]
-          matchExpression(whileStmt.expr, m)
-          matchStatement(whileStmt.stat, m)
-        case Println(_) => val printStmt = statement.asInstanceOf[Println]
-          matchExpression(printStmt.expr, m)
+        case If(expr,thn,els) =>
+          matchExpression(expr, m)
+          matchStatement(thn, m)
+          if(els != None) matchStatement(els.get, m)
+        case While(expr, stat) =>
+          matchExpression(expr, m)
+          matchStatement(stat, m)
+        case Println(expr) =>
+          matchExpression(expr, m)
         case Block(stats) =>
           for (stat <- stats)
             matchStatement(stat, m)
@@ -127,54 +129,53 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
     def matchExpression(expr: ExprTree, m:MethodSymbol): Boolean = {
       expr match {
-        case And(_,_) => val andExpr = expr.asInstanceOf[And]
-          matchExpression(andExpr.lhs, m)
-          matchExpression(andExpr.rhs, m)
-        case Or(_,_) => val orExpr = expr.asInstanceOf[Or]
-          matchExpression(orExpr.lhs, m)
-          matchExpression(orExpr.rhs, m)
-        case Plus(_,_) => val mlusExpr = expr.asInstanceOf[Plus]
-          matchExpression(mlusExpr.lhs, m)
-          matchExpression(mlusExpr.rhs, m)
-        case Minus(_,_) => val minusExpr = expr.asInstanceOf[Minus]
-          matchExpression(minusExpr.lhs, m)
-          matchExpression(minusExpr.rhs, m)
-        case Times(_,_) => val timesExpr = expr.asInstanceOf[Times]
-          matchExpression(timesExpr.lhs, m)
-          matchExpression(timesExpr.rhs, m)
-        case Div(_,_) => val divExpr = expr.asInstanceOf[Div]
-          matchExpression(divExpr.lhs, m)
-          matchExpression(divExpr.rhs, m)
-        case LessThan(_,_) => val ltExpr = expr.asInstanceOf[LessThan]
-          matchExpression(ltExpr.lhs, m)
-          matchExpression(ltExpr.rhs, m)
-        case Equals(_,_) => val eqExpr = expr.asInstanceOf[Equals]
-          matchExpression(eqExpr.lhs, m)
-          matchExpression(eqExpr.rhs, m)
-        case ArrayRead(_,_) => val arrReadExpr = expr.asInstanceOf[ArrayRead]
-          matchExpression(arrReadExpr.arr, m)
-          matchExpression(arrReadExpr.index, m)
-        case ArrayLength(_) => val arrLengthExpr = expr.asInstanceOf[ArrayLength]
-          matchExpression(arrLengthExpr.arr, m)
+        case And(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case Or(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case Plus(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case Minus(lhs,rhs) => val minusExpr =
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case Times(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case Div(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case LessThan(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case Equals(lhs,rhs) =>
+          matchExpression(lhs, m)
+          matchExpression(rhs, m)
+        case ArrayRead(arr,index) =>
+          matchExpression(arr, m)
+          matchExpression(index, m)
+        case ArrayLength(arr) =>
+          matchExpression(arr, m)
         case MethodCall(obj,meth,args) =>
-          println("====="+obj )
           matchExpression(obj, m)
           for (arg <- args) {
             println(arg)
             matchExpression(arg, m)
           }
-          meth.setSymbol(new MethodSymbol(("???"), new ClassSymbol("???")))
+          meth.setSymbol(new MethodSymbol("???", new ClassSymbol("???")))
         case New(tpe) =>
           val sym = gScope.lookupClass(tpe.value)
           if(sym != None)
             tpe.setSymbol(sym.get)
-        case NewIntArray(_) => val newIntArrExpr = expr.asInstanceOf[NewIntArray]
-          matchExpression(newIntArrExpr.size, m)
-        case Not(_) => val notExpr = expr.asInstanceOf[Not]
-          matchExpression(notExpr.expr, m)
+        case NewIntArray(size) =>
+          matchExpression(size, m)
+        case Not(expr) =>
+          matchExpression(expr, m)
         case This() => val thisExpr = expr.asInstanceOf[This]
           thisExpr.setSymbol(m.classSymbol)
-        case Identifier(_) => val id = expr.asInstanceOf[Identifier]
+        case Identifier(value) => val id = expr.asInstanceOf[Identifier]
           val sym = m.lookupVar(id.value)
 
           if(sym != None){
