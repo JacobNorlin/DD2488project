@@ -18,8 +18,14 @@ object NameAnalysis extends Pipeline[Program, Program] {
     prog.main.setSymbol(gScope.mainClass)
     prog.main.id.setSymbol(gScope.mainClass)
 
-
+    //Create class symbols
     for(cls <- prog.classes){
+      //check if class already defined
+      val className = cls.id.value
+      val dupClass = gScope.lookupClass(className)
+      if(dupClass != None){
+        fatal("Class already defined", cls)
+      }
       val cSym = createClsSym(cls)
       cls.setSymbol(cSym)
       cls.id.setSymbol(cSym)
@@ -37,10 +43,17 @@ object NameAnalysis extends Pipeline[Program, Program] {
         m.id.setSymbol(mSym)
         clsSym.methods = clsSym.methods + (mSym.name -> mSym)
       }
-      for (v <- cls.vars) {
-        val vSym = new VariableSymbol(v.id.value)
-        v.setSymbol(vSym)
-        v.id.setSymbol(vSym)
+      for (variable <- cls.vars) {
+        val varName = variable.id.value
+        //Look for duplicate var definitions
+        val dupVar = clsSym.lookupVar(varName)
+        if(dupVar != None){
+          fatal("Duplicate var definition", variable)
+        }
+        val vSym = new VariableSymbol(varName)
+        variable.setSymbol(vSym)
+        variable.id.setSymbol(vSym)
+        vSym.setPos(variable)
 
 
         clsSym.members = clsSym.members + (vSym.name-> vSym)
@@ -65,11 +78,10 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
     }
 
-
-
     def createMetSym(met: MethodDecl, clsSym: ClassSymbol): MethodSymbol = {
       val metSym = new MethodSymbol(met.id.value, clsSym)
       if(met.args != null) {
+        //Methods
         for (p <- met.args) {
           val vSym = new VariableSymbol(p.id.value)
           p.setSymbol(vSym)
@@ -78,10 +90,18 @@ object NameAnalysis extends Pipeline[Program, Program] {
         }
       }
       if(met.vars != null){
-        for (v <- met.vars) {
-          val vSym = new VariableSymbol(v.id.value)
-          v.setSymbol(vSym)
-          v.id.setSymbol(vSym)
+        //variables
+        for (variable <- met.vars) {
+          val varName = variable.id.value
+          //Look for duplicate var defs
+          val dupVar = metSym.lookupVar(varName)
+          if(dupVar != None){
+            fatal("Duplicate var definition",variable)
+          }
+          val vSym = new VariableSymbol(varName)
+          variable.setSymbol(vSym)
+          variable.id.setSymbol(vSym)
+          vSym.setPos(variable)
 
           metSym.members = metSym.members + (vSym.name -> vSym)
         }
@@ -90,7 +110,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
       metSym
     }
-
+    //Attach symbols to all statements inside method bodies
     for(cls <- prog.classes){
       for(m <- cls.methods){
         for(s <- m.stats){

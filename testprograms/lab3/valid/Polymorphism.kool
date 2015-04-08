@@ -5,6 +5,7 @@ object Polymorphism {
 }
 
 class PolymorphismTest {
+var text:String;
   def run(): String = {
     var shape : Shape;
     var unit : Int;
@@ -196,7 +197,6 @@ class Shape {
 }
 
 class Rectangle extends Shape {
-  var x : Int;
   var x : Int;
   var y : Int;
   
