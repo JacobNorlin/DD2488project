@@ -64,6 +64,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
     def linkParents(classDecls: List[ClassDecl]) = {
       for (t <- classDecls) {
         if (t.parent != null) {
+          if(gScope.lookupClass(t.parent.get.value) == null) fatal("parent class not declared", t)
           t.getSymbol.parent = Some(t.parent.get.getSymbol.asInstanceOf[ClassSymbol])
         }
       }
@@ -137,10 +138,12 @@ object NameAnalysis extends Pipeline[Program, Program] {
         case Assign(id,expr) =>
           val v = m.lookupVar(id.value)
           if(v != None) id.setSymbol(v.get)
+          else fatal("variable not declared", id)
           matchExpression(expr, m)
         case ArrayAssign(_,_,_) => val arrAssStmt = statement.asInstanceOf[ArrayAssign]
           val sym = m.lookupVar(arrAssStmt.id.value)
           if(sym != None) arrAssStmt.id.setSymbol(sym.get)
+          else fatal("array not declared", arrAssStmt.id)
           matchExpression(arrAssStmt.expr, m)
           matchExpression(arrAssStmt.index, m)
       }
@@ -197,12 +200,9 @@ object NameAnalysis extends Pipeline[Program, Program] {
           thisExpr.setSymbol(m.classSymbol)
         case Identifier(value) => val id = expr.asInstanceOf[Identifier]
           val sym = m.lookupVar(id.value)
-
           if(sym != None){
-
             id.setSymbol(sym.get)
-          }
-
+          } else fatal("variable not declared", id)
         case _ => println(expr)
       }
       false
