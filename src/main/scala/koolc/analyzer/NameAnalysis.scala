@@ -76,12 +76,30 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
     def linkParents(classDecls: List[ClassDecl]) = {
       for (t <- classDecls) {
-        println(t.parent)
         if (t.parent != None) {
           //Check if parent class is declared
-          if(gScope.lookupClass(t.parent.get.value) == None) fatal("Parent class not declared", t)
-          val clsSym = gScope.lookupClass(t.parent.get.value)
-          t.getSymbol.parent = clsSym
+          val clsSym = t.getSymbol
+          //Look for inheritance cycles
+          var parentSym = gScope.lookupClass(t.parent.get.value).orNull
+
+          if(parentSym == null) fatal("Parent class not declared", t)
+          clsSym.parent = Some(parentSym)
+
+          var break = false
+          while(!break){
+            if(parentSym.parent != None){
+              println(parentSym)
+              if(parentSym.parent.get == clsSym) {
+                fatal("Inheritance cycle detected", parentSym)
+              }
+              else {
+                parentSym = parentSym.parent.orNull
+              }
+            }else{
+              break = true
+            }
+          }
+
         }
       }
       for(cls <- classDecls){
