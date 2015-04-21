@@ -85,6 +85,9 @@ object NameAnalysis extends Pipeline[Program, Program] {
           if(parentSym == null) fatal("Parent class not declared", t)
           clsSym.parent = Some(parentSym)
 
+          /* Look for inheritance cycles, by looping
+          * through all parent and see if we ever end up
+          * in the same place again, mite b broken*/
           var break = false
           while(!break){
             if(parentSym.parent != None){
