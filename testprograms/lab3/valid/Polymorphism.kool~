@@ -32,7 +32,7 @@ var text:String;
     return "done";
   }
   
-  def displayShape(shape : Shape2) : Int = {
+  def displayShape(shape : Shape) : Int = {
     var text : String;
     
     text = "I am a " + shape.getColor();

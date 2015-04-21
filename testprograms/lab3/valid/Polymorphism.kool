@@ -4,7 +4,7 @@ object Polymorphism {
   }
 }
 
-class PolymorphismTest {
+class PolymorphismTest{
 var text:String;
   def run(): String = {
     var shape : Shape;

@@ -82,7 +82,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
           val clsSym = t.getSymbol
           //Look for inheritance cycles
           var parentSym = gScope.lookupClass(t.parent.get.value).orNull
-
+          if(t.parent.get.value == gScope.mainClass.name) fatal("Main object cannot be inherited", t)
           if(parentSym == null) fatal("Parent class not declared", t)
           clsSym.parent = Some(parentSym)
 
@@ -115,20 +115,25 @@ object NameAnalysis extends Pipeline[Program, Program] {
           if(met.args != null){
             for(v <- met.args){
               val dupl = v.tpe match {
-                case Identifier(name) => gScope.lookupClass(name).orNull
+                case Identifier(name) =>  if(name == gScope.mainClass.name) fatal("Main object cannot be used as type", v.getSymbol)
+                  gScope.lookupClass(name).orNull
+
                 case _ => 1
               }
-              if(dupl == null) fatal("Type class not declared", v.getSymbol)
+              if(dupl == null) fatal("Type class not declared", v)
             }
           }
           if(met.vars != null) {
             for (v <- met.vars) {
               println(v.tpe)
               val dupl = v.tpe match {
-                case Identifier(name) => gScope.lookupClass(name).orNull
+                case Identifier(name) => if(name == gScope.mainClass.name) fatal("Main object cannot be used as type", v)
+                  gScope.lookupClass(name).orNull
+
                 case _ => 1
               }
-              if (dupl == null) fatal("Type class not declared", v.getSymbol)
+
+              if (dupl == null) fatal("Type class not declared", v)
             }
           }
 
