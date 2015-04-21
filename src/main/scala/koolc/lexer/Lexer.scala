@@ -21,7 +21,7 @@ object Lexer extends Pipeline[File, Iterator[Token]] {
       case "String" => Tokens.STRING
       case "extends" => Tokens.EXTENDS
       case "Int" => Tokens.INT
-      case "Boolean" => Tokens.BOOLEAN
+      case "Bool" => Tokens.BOOLEAN
       case "while" => Tokens.WHILE
       case "if" => Tokens.IF
       case "else" => Tokens.ELSE

@@ -29,7 +29,8 @@ object NameAnalysis extends Pipeline[Program, Program] {
       val cSym = createClsSym(cls)
       cls.setSymbol(cSym)
       cls.id.setSymbol(cSym)
-
+      if(cSym.name == gScope.mainClass.name)
+        fatal("Class cannot have the same name as main object", cSym)
       gScope.classes = gScope.classes + (cSym.name -> cSym)
     }
 
@@ -107,10 +108,31 @@ object NameAnalysis extends Pipeline[Program, Program] {
       }
       for(cls <- classDecls){
         val clsSym = cls.getSymbol
-        for(metSym <- clsSym.methods.values){
+        for(met <- cls.methods){
+          val metSym = met.getSymbol
 
+          //Check if var type is declared if it is a class
+          if(met.args != null){
+            for(v <- met.args){
+              val dupl = v.tpe match {
+                case Identifier(name) => gScope.lookupClass(name).orNull
+                case _ => 1
+              }
+              if(dupl == null) fatal("Type class not declared", v.getSymbol)
+            }
+          }
+          if(met.vars != null) {
+            for (v <- met.vars) {
+              println(v.tpe)
+              val dupl = v.tpe match {
+                case Identifier(name) => gScope.lookupClass(name).orNull
+                case _ => 1
+              }
+              if (dupl == null) fatal("Type class not declared", v.getSymbol)
+            }
+          }
 
-          if (clsSym.parent != None) { //Set overridden to parent class
+          if (clsSym.parent != None) {
             //Check if overloaded method declaration exists
             val otherMeth = clsSym.parent.get.lookupMethod(metSym.name).orNull
             if(otherMeth != null){

@@ -169,7 +169,7 @@ class ReferenceTest {
   }
 }
 
-class Shape extends Circle{
+class Shape {
   var color : String;
   
   def init(col: String) : Shape = {
@@ -197,7 +197,7 @@ class Shape extends Circle{
   }
 }
 
-class Rectangle extends Circle {
+class Rectangle extends Shape {
   var x : Int;
   var y : Int;
   
@@ -251,7 +251,7 @@ class Square extends Rectangle {
   }
 }
 
-class Circle extends Square {
+class Circle extends Shape {
   def initCircle(c: String) : Circle = {
     var unit: Shape;
     unit = this.init(c);

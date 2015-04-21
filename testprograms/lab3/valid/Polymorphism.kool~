@@ -32,7 +32,7 @@ var text:String;
     return "done";
   }
   
-  def displayShape(shape : Shape) : Int = {
+  def displayShape(shape : Shape2) : Int = {
     var text : String;
     
     text = "I am a " + shape.getColor();
@@ -169,7 +169,7 @@ class ReferenceTest {
   }
 }
 
-class Shape extends Circle{
+class Shape {
   var color : String;
   
   def init(col: String) : Shape = {
@@ -197,7 +197,7 @@ class Shape extends Circle{
   }
 }
 
-class Rectangle extends Circle {
+class Rectangle extends Shape {
   var x : Int;
   var y : Int;
   
