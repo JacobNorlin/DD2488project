@@ -90,14 +90,15 @@ object NameAnalysis extends Pipeline[Program, Program] {
           * through all parent and see if we ever end up
           * in the same place again, mite b broken*/
           var break = false
+          var history = List[ClassSymbol](parentSym)
           while(!break){
             if(parentSym.parent != None){
-              println(parentSym)
-              if(parentSym.parent.get == clsSym) {
+              if(history.contains(parentSym.parent.get)) {
                 fatal("Inheritance cycle detected", parentSym)
               }
               else {
                 parentSym = parentSym.parent.orNull
+                history = history.::(parentSym)
               }
             }else{
               break = true
