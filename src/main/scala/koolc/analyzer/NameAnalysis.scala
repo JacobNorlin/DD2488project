@@ -33,7 +33,20 @@ object NameAnalysis extends Pipeline[Program, Program] {
       gScope.classes = gScope.classes + (cSym.name -> cSym)
     }
 
+    //Link all classes together. All classes need to exist to set relations between them(or at least it is easier)
     linkParents(prog.classes)
+
+    //Attach symbols to all statements inside method bodies
+    for(cls <- prog.classes){
+      for(m <- cls.methods){
+        for(s <- m.stats){
+          matchStatement(s, m.getSymbol)
+        }
+        matchExpression(m.retExpr, m.getSymbol)
+      }
+    }
+
+
 
     def createClsSym(cls: ClassDecl): ClassSymbol = {
       val clsSym = new ClassSymbol(cls.id.value)
@@ -63,16 +76,31 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
     def linkParents(classDecls: List[ClassDecl]) = {
       for (t <- classDecls) {
-        if (t.parent != null) {
-          if(gScope.lookupClass(t.parent.get.value) == null) fatal("parent class not declared", t)
-          t.getSymbol.parent = Some(t.parent.get.getSymbol.asInstanceOf[ClassSymbol])
+        println(t.parent)
+        if (t.parent != None) {
+          //Check if parent class is declared
+          if(gScope.lookupClass(t.parent.get.value) == None) fatal("Parent class not declared", t)
+          val clsSym = gScope.lookupClass(t.parent.get.value)
+          t.getSymbol.parent = clsSym
         }
       }
       for(cls <- classDecls){
-        for(m <- cls.methods){
+        val clsSym = cls.getSymbol
+        for(metSym <- clsSym.methods.values){
 
-          if (cls.parent != null) {
-            m.getSymbol.overridden = cls.getSymbol.parent.asInstanceOf[ClassSymbol].lookupMethod(m.id.value)
+
+          if (clsSym.parent != None) { //Set overridden to parent class
+            //Check if overloaded method declaration exists
+            val otherMeth = clsSym.parent.get.lookupMethod(metSym.name).orNull
+            if(otherMeth != null){
+              println(metSym.classSymbol.name,metSym.name, metSym.argList, otherMeth.classSymbol.name, otherMeth.name, otherMeth.argList)
+              //Check if method fits overloading constraint
+              if(metSym.argList != otherMeth.argList){
+                //Overriding does not apply
+                fatal("Overloading not allowed", metSym)
+              }
+            }
+            metSym.overridden = clsSym.parent.get.lookupMethod(metSym.name)
           }
         }
       }
@@ -81,13 +109,19 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
     def createMetSym(met: MethodDecl, clsSym: ClassSymbol): MethodSymbol = {
       val metSym = new MethodSymbol(met.id.value, clsSym)
+
+
+
       if(met.args != null) {
         //Methods
+        //parameters
         for (p <- met.args) {
           val vSym = new VariableSymbol(p.id.value)
           p.setSymbol(vSym)
           p.id.setSymbol(vSym)
           metSym.params = metSym.params + (vSym.name -> vSym)
+          //Used for parameter list comparisons
+          metSym.argList = metSym.argList.::(vSym )
         }
       }
       if(met.vars != null){
@@ -107,19 +141,15 @@ object NameAnalysis extends Pipeline[Program, Program] {
           metSym.members = metSym.members + (vSym.name -> vSym)
         }
       }
-      //arglist??
+      //Pretty bad, depends heavily on order of execution
+      val duplMet = clsSym.lookupMethod(metSym.name)//Parent are not set yet, so this checks only the local class
+      if(duplMet != None){
+        fatal("Method already declared", metSym)
+      }
 
       metSym
     }
-    //Attach symbols to all statements inside method bodies
-    for(cls <- prog.classes){
-      for(m <- cls.methods){
-        for(s <- m.stats){
-          matchStatement(s, m.getSymbol)
-          }
-        matchExpression(m.retExpr, m.getSymbol)
-        }
-      }
+
 
     def matchStatement(statement: StatTree, m: MethodSymbol): Boolean = {
       statement match {
@@ -136,14 +166,20 @@ object NameAnalysis extends Pipeline[Program, Program] {
           for (stat <- stats)
             matchStatement(stat, m)
         case Assign(id,expr) =>
-          val v = m.lookupVar(id.value)
-          if(v != None) id.setSymbol(v.get)
-          else fatal("variable not declared", id)
+          val varExists = m.lookupVar(id.value) //Will also check class, and parents and whatevs
+
+          if(varExists != None){
+            id.setSymbol(varExists.get)
+          }else{
+            //Variable is never declared
+            fatal("Variable not declared", id)
+          }
+
           matchExpression(expr, m)
         case ArrayAssign(_,_,_) => val arrAssStmt = statement.asInstanceOf[ArrayAssign]
           val sym = m.lookupVar(arrAssStmt.id.value)
           if(sym != None) arrAssStmt.id.setSymbol(sym.get)
-          else fatal("array not declared", arrAssStmt.id)
+          else fatal("Array not declared", arrAssStmt.id)
           matchExpression(arrAssStmt.expr, m)
           matchExpression(arrAssStmt.index, m)
       }
@@ -184,14 +220,16 @@ object NameAnalysis extends Pipeline[Program, Program] {
         case MethodCall(obj,meth,args) =>
           matchExpression(obj, m)
           for (arg <- args) {
-            println(arg)
             matchExpression(arg, m)
           }
           meth.setSymbol(new MethodSymbol("???", new ClassSymbol("???")))
         case New(tpe) =>
           val sym = gScope.lookupClass(tpe.value)
-          if(sym != None)
+          if(sym != None) {
             tpe.setSymbol(sym.get)
+          }else{//If the class is not declared
+            fatal("Class not declared", tpe)
+          }
         case NewIntArray(size) =>
           matchExpression(size, m)
         case Not(expr) =>
@@ -199,11 +237,12 @@ object NameAnalysis extends Pipeline[Program, Program] {
         case This() => val thisExpr = expr.asInstanceOf[This]
           thisExpr.setSymbol(m.classSymbol)
         case Identifier(value) => val id = expr.asInstanceOf[Identifier]
+          //Check if variable exists
           val sym = m.lookupVar(id.value)
           if(sym != None){
             id.setSymbol(sym.get)
-          } else fatal("variable not declared", id)
-        case _ => println(expr)
+          } else fatal("Variable not declared", id)
+        case _ =>
       }
       false
     }

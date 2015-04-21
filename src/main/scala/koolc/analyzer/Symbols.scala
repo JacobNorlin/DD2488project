@@ -56,9 +56,9 @@ object Symbols {
     def lookupMethod(n: String): Option[MethodSymbol] = {
       val m = methods.getOrElse(n, None)
       var r:Option[MethodSymbol] = None
-      if(m == None)
+      if(m == None && parent != None)
         r = Option(parent.get.lookupMethod(n).orNull)
-      else
+      else if(m != None)
         r = Some(m.asInstanceOf[MethodSymbol])
       r
     }

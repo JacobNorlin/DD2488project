@@ -425,12 +425,13 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         readToken
 
         def findExtends: Option[Identifier] = {
+          var ret:Option[Identifier] = None
           if(currentToken.kind.equals(EXTENDS)){
             eat(EXTENDS)
-            Option(findIdentifier)
+            ret = Option(findIdentifier)
             readToken
           }
-          null
+          ret
         }
 
         val ext = findExtends

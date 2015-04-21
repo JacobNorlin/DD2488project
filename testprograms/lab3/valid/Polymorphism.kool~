@@ -214,7 +214,7 @@ class Rectangle extends Shape {
     return "rectangle";
   }
   
-  def draw() : Int = {
+  def draw(col: String) : Int = {
     var first: String;
     var second: String;
     var i: Int;
