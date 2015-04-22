@@ -2,6 +2,7 @@ package koolc
 package analyzer
 
 import utils._
+import Types._
 
 object Symbols {
   trait Symbolic[S <: Symbol] {
