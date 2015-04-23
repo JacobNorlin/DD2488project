@@ -19,7 +19,7 @@ object Symbols {
     }
   }
 
-  sealed abstract class Symbol extends Positioned {
+  sealed abstract class Symbol extends Positioned with Typed {
     val id: Int = ID.next
     val name: String
   }
@@ -36,13 +36,12 @@ object Symbols {
 
   class GlobalScope {
     var mainClass: ClassSymbol = _
-    var classes = Map[String,ClassSymbol]()
-
+    var classes = Map[String, ClassSymbol]()
 
     def lookupClass(n: String): Option[ClassSymbol] = {
       val c = classes.getOrElse(n, None)
-      var r:Option[ClassSymbol] = None
-      if(c != None){
+      var r: Option[ClassSymbol] = None
+      if (c != None) {
         r = Some(c.asInstanceOf[ClassSymbol])
       }
       r
@@ -51,34 +50,34 @@ object Symbols {
 
   class ClassSymbol(val name: String) extends Symbol {
     var parent: Option[ClassSymbol] = None
-    var methods = Map[String,MethodSymbol]()
-    var members = Map[String,VariableSymbol]()
+    var methods = Map[String, MethodSymbol]()
+    var members = Map[String, VariableSymbol]()
 
     def lookupMethod(n: String): Option[MethodSymbol] = {
       val m = methods.getOrElse(n, None)
-      var r:Option[MethodSymbol] = None
-      if(m == None && parent != None)
+      var r: Option[MethodSymbol] = None
+      if (m == None && parent != None)
         r = Option(parent.get.lookupMethod(n).orNull)
-      else if(m != None)
+      else if (m != None)
         r = Some(m.asInstanceOf[MethodSymbol])
       r
     }
     def lookupVar(n: String): Option[VariableSymbol] = {
       val m = members.getOrElse(n, None)
-      var r:Option[VariableSymbol] = None
-      if(m != None)
+      var r: Option[VariableSymbol] = None
+      if (m != None)
         r = Some(m.asInstanceOf[VariableSymbol])
-      else if(parent != None)
+      else if (parent != None)
         r = Option(parent.get.lookupVar(n).orNull)
       r
     }
   }
 
   class MethodSymbol(val name: String, val classSymbol: ClassSymbol) extends Symbol {
-    var params = Map[String,VariableSymbol]()
-    var members = Map[String,VariableSymbol]()
+    var params = Map[String, VariableSymbol]()
+    var members = Map[String, VariableSymbol]()
     var argList: List[VariableSymbol] = Nil
-    var overridden : Option[MethodSymbol] = None
+    var overridden: Option[MethodSymbol] = None
 
     def lookupVar(n: String): Option[VariableSymbol] = {
       val p = params.getOrElse(n, None)
@@ -86,9 +85,9 @@ object Symbols {
       //println("Looking up: "+n+" found: ",p,m,params)
       var r: Option[VariableSymbol] = None
 
-      if(p != None)
+      if (p != None)
         r = Some(p.asInstanceOf[VariableSymbol])
-      else if(m != None)
+      else if (m != None)
         r = Some(m.asInstanceOf[VariableSymbol])
       else
         r = classSymbol.lookupVar(n)
@@ -96,5 +95,7 @@ object Symbols {
     }
   }
 
-  class VariableSymbol(val name: String) extends Symbol
+  class VariableSymbol(val name: String) extends Symbol {
+    var used: Boolean = false
+  }
 }
