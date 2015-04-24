@@ -3,13 +3,14 @@ package koolc
 import koolc.analyzer.NameAnalysis
 import utils._
 import java.io.File
+import koolc.analyzer.TypeChecking
 
 import lexer._
 import ast._
 
 object Main {
 
-  var pipeline = Lexer andThen Parser andThen NameAnalysis
+  var pipeline = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking
 
   def processOptions(args: Array[String]): Context = {
 

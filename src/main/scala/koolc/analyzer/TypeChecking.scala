@@ -14,6 +14,15 @@ object TypeChecking extends Pipeline[Program, Program] {
   def run(ctx: Context)(prog: Program): Program = {
     import ctx.reporter._
 
+    for(cls <- prog.classes){
+      for(m <- cls.methods){
+        for(stat <- m.stats){
+          tcStat(stat)
+        }
+        tcExpr(m.retExpr, m.getSymbol.getType)
+      }
+    }
+
     def tcExpr(expr: ExprTree, expected: Type*): Type = {
       val tpe: Type = expr match {
         case And(lhs, rhs) =>
@@ -48,9 +57,9 @@ object TypeChecking extends Pipeline[Program, Program] {
           tcExpr(rhs, TInt)
           TBoolean
         case Equals(lhs, rhs) =>
-          val lhsType = tcExpr(lhs, anyObject)
-          val rhsType = tcExpr(rhs, anyObject)
-          if(lhsType != TObject || rhsType != TObject){
+          val lhsType = tcExpr(lhs, TInt, TString, TBoolean, anyObject)
+          val rhsType = tcExpr(rhs, TInt, TString, TBoolean, anyObject)
+          if(!lhsType.isSubTypeOf(anyObject) || !rhsType.isSubTypeOf(anyObject)){
             if(lhsType != rhsType)
               error("Invalid comparison between: " + lhsType + " and " + rhsType, lhs)
           }
@@ -65,11 +74,13 @@ object TypeChecking extends Pipeline[Program, Program] {
         case met: MethodCall =>
           tcExpr(met.obj, tcExpr(met.obj))
           for (arg <- met.args) {
-            tcExpr(arg, anyObject)
+            tcExpr(arg, TInt, TString, TBoolean, TIntArray, anyObject)
           }
+          //println(met.getType)
           met.getType
         case New(tpe) =>
           tcExpr(tpe, tpe.getType)
+          TObject(tpe.getSymbol.asInstanceOf[ClassSymbol])
         case newArr: NewIntArray =>
           tcExpr(newArr.size, TInt)
           TIntArray
@@ -80,9 +91,9 @@ object TypeChecking extends Pipeline[Program, Program] {
           thisExpr.getType
         case id: Identifier =>
           id.getType
-        case IntLit() =>
+        case IntLit(_) =>
           TInt
-        case StringLit() =>
+        case StringLit(_) =>
           TString
         case True() =>
           TBoolean
@@ -91,8 +102,8 @@ object TypeChecking extends Pipeline[Program, Program] {
 
 
       } // TODO: Compute type for each kind of expression
-
-      //expr.setType(tpe)
+     // println(expr, tpe)
+      expr.setType(tpe)
       // Check result and return a valid type in case of error
       if (expected.isEmpty) {
         tpe
