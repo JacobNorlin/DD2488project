@@ -110,6 +110,8 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
         }
       }
+
+      //Look for errors
       for (cls <- classDecls) {
         val clsSym = cls.getSymbol
 
@@ -155,15 +157,15 @@ object NameAnalysis extends Pipeline[Program, Program] {
           if (clsSym.parent != None) {
             //Check if overloaded method declaration exists
             val otherMeth = clsSym.parent.get.lookupMethod(metSym.name).orNull
+
             if (otherMeth != null) {
-              //println(metSym.classSymbol.name, metSym.name, metSym.argList, otherMeth.classSymbol.name, otherMeth.name, otherMeth.argList)
               //Check if method fits overloading constraint
-              if (metSym.argList != otherMeth.argList) {
+              if (metSym.argList.length != otherMeth.argList.length) {
                 //Overriding does not apply
                 error("Overloading not allowed, must have the same amount of parameters", metSym)
               }
               metSym.argList.zip(otherMeth.argList).filter(x => x._1.getType != x._2.getType)
-              .map(x => error("Overriding parameters need to be of the same type. Found: "+x._2.getType+", expected: "+x._1.getType, x._2))
+              .map(x => error("Overriding parameters need to be of the same type. Found: "+x._1.getType+", expected: "+x._2.getType, x._1))
 
             }
             metSym.overridden = clsSym.parent.get.lookupMethod(metSym.name)
@@ -236,7 +238,6 @@ object NameAnalysis extends Pipeline[Program, Program] {
       //Pretty bad, depends heavily on order of execution
       val duplMet = clsSym.lookupMethod(metSym.name) //Parent are not set yet, so this checks only the local class
       if (duplMet != None) {
-        println(metSym.position)
         error("Duplicate method definition", metSym)
       }
 

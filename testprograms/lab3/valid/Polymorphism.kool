@@ -42,16 +42,6 @@ var text:String;
     println(text);
     return shape.draw();
   }
-
-  def displayShape(shape : Shape) : Int = {
-    var text : String;
-    
-    text = "I am a " + shape.getColor();
-    text = text + " ";
-    text = text + shape.getName();
-    println(text);
-    return shape.draw();
-  }
 }
 
 class ReferenceTest {

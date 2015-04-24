@@ -71,6 +71,7 @@ object Symbols {
         r = Option(parent.get.lookupVar(n).orNull)
       r
     }
+
   }
 
   class MethodSymbol(val name: String, val classSymbol: ClassSymbol) extends Symbol {
