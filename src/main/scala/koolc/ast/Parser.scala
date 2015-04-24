@@ -358,7 +358,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           eat(COLON)
           val typeTree = typeDecl
 
-          parList = parList++List(Formal(typeTree, id))
+          parList = parList++List(Formal(typeTree, id).setPos(id))
 
           while(currentToken.kind.equals(COMMA)){
             readToken

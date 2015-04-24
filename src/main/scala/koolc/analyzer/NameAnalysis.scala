@@ -31,6 +31,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
       cSym.setType(TObject(cSym))
       cls.setSymbol(cSym)
       cls.id.setSymbol(cSym)
+      cSym.setPos(cls)
       if (cSym.name == gScope.mainClass.name)
         fatal("Class cannot have the same name as main object", cSym)
       gScope.classes = gScope.classes + (cSym.name -> cSym)
@@ -55,6 +56,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
         val mSym = createMetSym(m, clsSym)
         m.setSymbol(mSym)
         m.id.setSymbol(mSym)
+        mSym.setPos(m)
         clsSym.methods = clsSym.methods + (mSym.name -> mSym)
       }
       for (variable <- cls.vars) {
@@ -62,7 +64,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
         //Look for duplicate var definitions
         val dupVar = clsSym.lookupVar(varName)
         if (dupVar != None) {
-          fatal("Duplicate var definition", variable)
+          error("Duplicate var definition", variable)
         }
         val vSym = new VariableSymbol(varName)
 
@@ -111,44 +113,42 @@ object NameAnalysis extends Pipeline[Program, Program] {
       for (cls <- classDecls) {
         val clsSym = cls.getSymbol
 
-        for(clsVar <- cls.vars){
-          clsVar.getSymbol.setType(findType(clsVar.tpe))
-        }
+
 
         for (met <- cls.methods) {
           val metSym = met.getSymbol
-          metSym.setType(findType(met.retType))
-
 
 
           //Check if var type is declared if it is a class
           if (met.args != null) {
             for (v <- met.args) {
-              v.getSymbol.setType(findType(v.tpe))
+
 
               val dupl = v.tpe match {
                 case Identifier(name) =>
-                  if (name == gScope.mainClass.name) fatal("Main object cannot be used as type", v.getSymbol)
+                  if (name == gScope.mainClass.name) error("Main object cannot be used as type", v)
                   gScope.lookupClass(name).orNull
 
                 case _ => 1
               }
-              if (dupl == null) fatal("Type class not declared", v)
+              if (dupl == null) error("Type class not declared", v)
+
+              v.getSymbol.setType(findType(v.tpe))
             }
           }
           if (met.vars != null) {
             for (v <- met.vars) {
-              v.getSymbol.setType(findType(v.tpe))
-
               val dupl = v.tpe match {
                 case Identifier(name) =>
-                  if (name == gScope.mainClass.name) fatal("Main object cannot be used as type", v)
+                  if (name == gScope.mainClass.name) error("Main object cannot be used as type", v)
                   gScope.lookupClass(name).orNull
 
                 case _ => 1
               }
 
-              if (dupl == null) fatal("Type class not declared", v)
+              if (dupl == null) error("Type class not declared", v)
+
+              v.getSymbol.setType(findType(v.tpe))
             }
           }
 
@@ -162,15 +162,18 @@ object NameAnalysis extends Pipeline[Program, Program] {
                 //Overriding does not apply
                 error("Overloading not allowed, must have the same amount of parameters", metSym)
               }
-              if (metSym.getType != otherMeth.getType){
-                error("Overloading not allowed, return type of methods be the same")
-              }
               metSym.argList.zip(otherMeth.argList).filter(x => x._1.getType != x._2.getType)
               .map(x => error("Overriding parameters need to be of the same type. Found: "+x._2.getType+", expected: "+x._1.getType, x._2))
 
             }
             metSym.overridden = clsSym.parent.get.lookupMethod(metSym.name)
           }
+
+          //Set types after all errors have been caught
+          metSym.setType(findType(met.retType))
+        }
+        for(clsVar <- cls.vars){
+          clsVar.getSymbol.setType(findType(clsVar.tpe))
         }
       }
 
@@ -186,12 +189,16 @@ object NameAnalysis extends Pipeline[Program, Program] {
       case arr: IntArrayType =>
         TIntArray
       case id: Identifier =>
-        //println(id)
-        TObject(gScope.lookupClass(id.value).get)
+        val cls = gScope.lookupClass(id.value)
+        if(cls != None)
+          TObject(cls.get)
+        else
+          TUntyped
     }
 
     def createMetSym(met: MethodDecl, clsSym: ClassSymbol): MethodSymbol = {
       val metSym = new MethodSymbol(met.id.value, clsSym)
+      metSym.setPos(met.id)
 
       if (met.args != null) {
         //Methods
@@ -200,6 +207,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
           val vSym = new VariableSymbol(p.id.value)
           p.setSymbol(vSym)
           p.id.setSymbol(vSym)
+          vSym.setPos(p)
 
           metSym.params = metSym.params + (vSym.name -> vSym)
           //Used for parameter list comparisons
@@ -213,7 +221,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
           //Look for duplicate var defs
           val dupVar = metSym.lookupVar(varName)
           if (dupVar != None) {
-            fatal("Duplicate var definition", variable)
+            error("Duplicate var definition", variable)
           }
           val vSym = new VariableSymbol(varName)
 
@@ -228,7 +236,8 @@ object NameAnalysis extends Pipeline[Program, Program] {
       //Pretty bad, depends heavily on order of execution
       val duplMet = clsSym.lookupMethod(metSym.name) //Parent are not set yet, so this checks only the local class
       if (duplMet != None) {
-        fatal("Method already declared", metSym)
+        println(metSym.position)
+        error("Duplicate method definition", metSym)
       }
 
       metSym
@@ -308,16 +317,17 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
           val foo = matchExpression(mc.obj, m)
           val cls = gScope.lookupClass(foo.getType.toString)
-          val met = cls.get.lookupMethod(mc.meth.value)
-          mc.setType(met.get.getType)
+          if(cls != None){
+            val met = cls.get.lookupMethod(mc.meth.value)
+            mc.setType(met.get.getType)
+          }else{
+
+          }
+
           for (arg <- mc.args) {
             matchExpression(arg, m)
           }
-
-
           ret = foo
-         // mc.obj.
-          //mc.setType(mc.meth.getSymbol.asInstanceOf[ClassSymbol].lookupMethod(mc.meth.value).get.getType)
 
         case New(tpe) =>
           val sym = gScope.lookupClass(tpe.value)
