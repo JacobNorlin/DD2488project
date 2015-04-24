@@ -5,11 +5,10 @@ object Polymorphism {
 }
 
 class PolymorphismTest{
-var text:String;
+
   def run(): String = {
     var shape : Shape;
     var unit : Int;
-	unit = unit + shape;
     
     shape = new Shape().init("blue");
     unit = this.displayShape(shape);

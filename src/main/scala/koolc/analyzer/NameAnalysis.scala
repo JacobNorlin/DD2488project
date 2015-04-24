@@ -260,9 +260,9 @@ object NameAnalysis extends Pipeline[Program, Program] {
             matchStatement(stat, m)
         case Assign(id, expr) =>
           val varExists = m.lookupVar(id.value) //Will also check class, and parents and whatevs
-
           if (varExists != None) {
             id.setSymbol(varExists.get)
+
 
           } else {
             //Variable is never declared
