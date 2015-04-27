@@ -1,0 +1,7 @@
+object Foo {
+    def main() : Unit = { 
+    }
+}
+
+class Bar {
+}

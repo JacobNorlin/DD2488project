@@ -1,4 +1,4 @@
-package koolc
+package koolcNew
 package ast
 
 import utils._

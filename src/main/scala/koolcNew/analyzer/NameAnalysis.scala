@@ -1,7 +1,7 @@
-package koolc
+package koolcNew
 package analyzer
 
-import koolc.analyzer.Types._
+import koolcNew.analyzer.Types._
 import utils._
 import ast.Trees._
 import Symbols._

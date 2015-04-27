@@ -1,4 +1,4 @@
-package koolc
+package koolcNew
 package ast
 
 import Trees._
@@ -50,7 +50,7 @@ object Printer {
     def printClass(classDecl: ClassDecl) = {
       sb.append("class ")
       printIdentifier(classDecl.id)
-      if(classDecl.parent != null){
+      if(classDecl.parent != None){
         sb.append(" extends ")
         sb.append(classDecl.parent.get.value)
       }
@@ -190,7 +190,7 @@ object Printer {
     }
 
     def printIdentifier(id: Identifier) = {
-      println(id+"#"+id.getSymbol.id)
+      //println(id+"#"+id.getSymbol.id)
       sb.append(id.value+"#"+id.getSymbol.id);
     }
 

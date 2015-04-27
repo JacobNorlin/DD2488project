@@ -1,0 +1,74 @@
+
+
+import java.io.File
+
+import koolcNew.analyzer.NameAnalysis
+import koolcNew.ast
+import koolcNew.ast.Trees._
+import koolcNew.ast._
+import koolcNew.lexer.Lexer
+import koolcNew.utils.Context
+import org.scalatest._
+
+/**
+ * Created by jacob on 2015-04-27.
+ */
+class NameAnalysisTest extends FlatSpec{
+
+
+
+  "ourProg" should "be equal to refProg" in {
+    val pipeline = Lexer andThen Parser andThen NameAnalysis
+    val refPipeline = koolc.lexer.Lexer andThen koolc.ast.Parser andThen koolc.analyzer.NameAnalysis
+
+    val ctx = Context(reporter = new koolcNew.utils.Reporter(), file = new File("testprograms/lab3/valid/Factorial.kool"), outDir = None)
+    val refCtx = koolc.utils.Context(reporter = new koolc.utils.Reporter(), files = List(new File("testprograms/lab3/valid/Factorial.kool")), outDir = None)
+    val program = pipeline.run(ctx)(ctx.file)
+    val refProgram = refPipeline.run(refCtx)(ctx.file)
+
+
+    val ids = getAllIds(program)
+    val refIds = getAllIds(refProgram)
+    println(ids, refIds)
+
+
+    assert(program.toString === koolc.ast.ASTPrinter(refProgram))
+    assert(ids === refIds)
+
+  }
+
+  def getAllIds(prog: Program): List[Int]= {
+    prog.classes.flatMap(cls => {
+      List(cls.getSymbol.id)++
+        cls.vars.map(v => v.getSymbol.id) ++
+        cls.methods.flatMap(met => {
+          List(met.getSymbol.id)++
+            met.args.map(arg => arg.getSymbol.id) ++
+            met.vars.map(v1 => v1.getSymbol.id)
+        })
+    })
+  }
+  def getAllIds(prog: koolc.ast.Trees.Program): List[Int] = {
+    prog.classes.flatMap(cls => {
+      List(cls.getSymbol.id)++
+        cls.vars.map(v => v.getSymbol.id) ++
+        cls.methods.flatMap(met => {
+          List(met.getSymbol.id)++
+            met.args.map(arg => arg.getSymbol.id) ++
+            met.vars.map(v1 => v1.getSymbol.id)
+        })
+    })
+  }
+
+
+//  def convertTree(t: koolc.ast.Trees.Program) = {
+//    def convertClasses(classes: List[koolc.ast.Trees.ClassDecl]): List[ClassDecl] = {
+//      var clses:List[ClassDecl]
+//      for(cls <- classes){
+//        clses.::(cls.)
+//      }
+//    }
+//    var program = Program(MainObject(t.main.id), )
+//  }
+
+}

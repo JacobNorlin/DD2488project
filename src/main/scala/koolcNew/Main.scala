@@ -1,9 +1,9 @@
-package koolc
+package koolcNew
 
-import koolc.analyzer.NameAnalysis
+import koolcNew.analyzer.NameAnalysis
 import utils._
 import java.io.File
-import koolc.analyzer.TypeChecking
+import koolcNew.analyzer.TypeChecking
 
 import lexer._
 import ast._
@@ -53,12 +53,13 @@ object Main {
 
   def main(args: Array[String]) {
 
+
     val ctx = processOptions(args)
 
     val program = pipeline.run(ctx)(ctx.file)
 
 
-    //println(Printer(program))
+    println(program)
 
 
   }

@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-package koolc
+package koolcNew
 package utils
 
 
