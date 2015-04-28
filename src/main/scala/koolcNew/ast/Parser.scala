@@ -256,7 +256,7 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         case BANG => {
           val pos = currentToken
           readToken
-          ret = Not(expression).setPos(pos)
+          ret = Not(expr5).setPos(pos)
         }
         case LPAREN => {
           val pos = currentToken
