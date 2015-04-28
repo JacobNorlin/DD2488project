@@ -80,7 +80,7 @@ object Printer {
       sb.append("def ")
       printIdentifier(method.id)
       sb.append(" (")
-      if(method.args != null){
+      if(!method.args.isEmpty){
         printIdentifier(method.args.head.id)
         sb.append(" : "+parseType(method.args.head.tpe))
         method.args.tail.map(x => {
@@ -141,7 +141,7 @@ object Printer {
           printExpression(ifNode.expr)
           sb.append(" ) ")
           printStatement(ifNode.thn)
-          if(ifNode.els != null){
+          if(ifNode.els != None){
             putTabs
             sb.append("else ")
             printStatement(ifNode.els.get)
