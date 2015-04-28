@@ -96,17 +96,17 @@ object Parser extends Pipeline[Iterator[Token], Program] {
           val expr = expression
           eat(RPAREN)
           val ifStatement = statDecl
-          var elseStatement: Option[StatTree] = null
+          var elseStatement: Option[StatTree] = None
           if(currentToken.kind.equals(ELSE)){
             readToken
-            elseStatement = Option(statDecl)
+            elseStatement = Some(statDecl)
           }
           If(expr, ifStatement, elseStatement).setPos(pos)
         }
         case LBRACE => {
           val pos = currentToken
           readToken
-          var statList: List[StatTree] = List[StatTree]()
+          var statList: List[StatTree] = List()
           while(firstOfStatement.contains(currentToken.kind)){
             statList = statList++List(statDecl)
           }
@@ -347,9 +347,9 @@ object Parser extends Pipeline[Iterator[Token], Program] {
       }
 
       def formalDecl: List[Formal] = {
-        var parList:List[Formal] = List[Formal]()
+        var parList:List[Formal] = List()
 
-        var returnValue: List[Formal] = null
+        var returnValue: List[Formal] = List()
 
         if(currentToken.kind.equals(IDKIND)){
           val id = findIdentifier
@@ -396,8 +396,8 @@ object Parser extends Pipeline[Iterator[Token], Program] {
         eat(EQSIGN)
         eat(LBRACE)
 
-        var varList = List[VarDecl]()
-        var statList = List[StatTree]()
+        var varList: List[VarDecl] = List()
+        var statList:List[StatTree] = List()
 
         while(currentToken.kind.equals(VAR)){
           varList = varList++List(varDecl)

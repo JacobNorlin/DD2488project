@@ -59,7 +59,7 @@ object Main {
     val program = pipeline.run(ctx)(ctx.file)
 
 
-    println(program)
+    println(Printer(program))
 
 
   }

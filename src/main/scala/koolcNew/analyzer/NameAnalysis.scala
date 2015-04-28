@@ -249,7 +249,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
         case If(expr, thn, els) =>
           matchExpression(expr, m)
           matchStatement(thn, m)
-          if (els != null) matchStatement(els.get, m)
+          if (els != None) matchStatement(els.get, m)
         case While(expr, stat) =>
           matchExpression(expr, m)
           matchStatement(stat, m)
@@ -356,7 +356,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
             id.setSymbol(sym.get)
             ret = id.getSymbol
           }else
-            error("Variable not declared", id)
+          error("Variable not declared", id)
         case _ =>
       }
       ret

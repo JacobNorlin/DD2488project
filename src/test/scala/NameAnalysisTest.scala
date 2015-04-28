@@ -3,8 +3,7 @@
 import java.io.File
 
 import koolcNew.analyzer.NameAnalysis
-import koolcNew.ast
-import koolcNew.ast.Trees._
+import testUtils._
 import koolcNew.ast._
 import koolcNew.lexer.Lexer
 import koolcNew.utils.Context
@@ -36,105 +35,33 @@ class NameAnalysisTest extends FlatSpec{
       val refIds = getAllIds(refProgram)
       val names = getAllNames(program)
       val refNames = getAllNames(refProgram)
-      println(file.getName+": "+names, file.getName+": "+refNames)
-      println(file.getName+": "+names, file.getName+": "+refNames)
 
 
-      //assert(program.toString === koolc.ast.ASTPrinter(refProgram))
-      assert(ids === refIds)
+      /* This counts the number of occurences of each symbol. Since where the symbol ids
+      are attached  varies between the reference compiler and our compiler, this should serve
+      as a decent approximation of similarity between symbols. If number of symbol occurences
+      are the same between the programs, then for large programs the probability of the symbols
+      being exactly the same increasees
+       */
+      val idControl = ids.map(id => ids.count(_ == id)).sortBy(x=>x)
+      val refIdControl = refIds.map(id => refIds.count(_ == id)).sortBy(x=>x)
+
+      //Check that the same amount of sybmols exists, and they are atleast in some approximation the same
+      assert(ids.length === refIds.length)
+      assert(idControl === refIdControl)
+      //Checks that varName are the same
       assert(names === refNames)
 
+      println(file.getName+" NameAnalysis passed")
+
+
     }
 
 
   }
-  def getAllNames(prog: Program): List[String]= {
-    def getArgs(met: MethodDecl): List[String] = {
-      if (met.args != null) {
-        met.args.map(arg => arg.getSymbol.name)
-      } else {
-        List()
-      }
-    }
-    prog.classes.flatMap(cls => {
-      List(cls.getSymbol.name) ++
-        cls.vars.map(v => v.getSymbol.name) ++
-        cls.methods.flatMap(met => {
-          List(met.getSymbol.name) ++
-            getArgs(met) ++
-            met.vars.map(v1 => v1.getSymbol.name)
-        })
-    }).sortBy(x => x)
-  }
-
-  def getAllNames(prog: koolc.ast.Trees.Program): List[String]= {
-    def getArgs(met: koolc.ast.Trees.MethodDecl): List[String] = {
-      if (met.args != null) {
-        met.args.map(arg => arg.getSymbol.name)
-      } else {
-        List()
-      }
-    }
-    prog.classes.flatMap(cls => {
-      List(cls.getSymbol.name) ++
-        cls.vars.map(v => v.getSymbol.name) ++
-        cls.methods.flatMap(met => {
-          List(met.getSymbol.name) ++
-            getArgs(met) ++
-            met.vars.map(v1 => v1.getSymbol.name)
-        })
-    }).sortBy(x => x)
-  }
 
 
-  def getAllIds(prog: Program): List[Int]= {
-    def getArgs(met:MethodDecl):List[Int] = {
-      if(met.args != null){
-        met.args.map(arg => arg.getSymbol.id)
-      }else{
-        List()
-      }
-    }
-    prog.classes.flatMap(cls => {
-      List(cls.getSymbol.id) ++
-        cls.vars.map(v => v.getSymbol.id) ++
-        cls.methods.flatMap(met => {
-          List(met.getSymbol.id) ++
-            getArgs(met) ++
-            met.vars.map(v1 => v1.getSymbol.id)
-        })
-    }).sortBy(x => x)
-
-  }
-  def getAllIds(prog: koolc.ast.Trees.Program): List[Int] = {
-    def getArgs(met: koolc.ast.Trees.MethodDecl): List[Int] = {
-      if (met.args != null) {
-        met.args.map(arg => arg.getSymbol.id)
-      } else {
-        List()
-      }
-    }
-    prog.classes.flatMap(cls => {
-      List(cls.getSymbol.id) ++
-        cls.vars.map(v => v.getSymbol.id) ++
-        cls.methods.flatMap(met => {
-          List(met.getSymbol.id) ++
-          getArgs(met) ++
-            met.vars.map(v1 => v1.getSymbol.id)
-        })
-    }).sortBy(x => x)
-
-  }
 
 
-//  def convertTree(t: koolc.ast.Trees.Program) = {
-//    def convertClasses(classes: List[koolc.ast.Trees.ClassDecl]): List[ClassDecl] = {
-//      var clses:List[ClassDecl]
-//      for(cls <- classes){
-//        clses.::(cls.)
-//      }
-//    }
-//    var program = Program(MainObject(t.main.id), )
-//  }
 
 }
