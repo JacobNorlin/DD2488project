@@ -1,6 +1,7 @@
 package koolcNew
 
 import koolcNew.analyzer.NameAnalysis
+import koolcNew.code.CodeGeneration
 import utils._
 import java.io.File
 import koolcNew.analyzer.TypeChecking
@@ -10,7 +11,7 @@ import ast._
 
 object Main {
 
-  var pipeline = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking
+  var pipeline = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking andThen CodeGeneration
 
   def processOptions(args: Array[String]): Context = {
 
@@ -26,7 +27,7 @@ object Main {
 
         case "--tokens" :: args =>{
           processOption(args)
-          pipeline = Lexer andThen PrintTokens andThen Parser
+          pipeline = Lexer andThen PrintTokens andThen Parser andThen CodeGeneration
         }
 
 
@@ -59,7 +60,7 @@ object Main {
     val program = pipeline.run(ctx)(ctx.file)
 
 
-    println(Printer(program))
+    //println(Printer(program))
 
 
   }

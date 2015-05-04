@@ -322,7 +322,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
             val met = cls.get.lookupMethod(mc.meth.value)
             mc.setType(met.get.getType)
           }else{
-
+            error("Object not defined", mc)
           }
 
           for (arg <- mc.args) {
