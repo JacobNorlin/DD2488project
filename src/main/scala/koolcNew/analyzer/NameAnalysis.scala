@@ -292,36 +292,48 @@ object NameAnalysis extends Pipeline[Program, Program] {
     def matchExpression(expr: ExprTree, m: MethodSymbol): Symbol = {
       var ret:Symbol = null
       expr match {
-        case And(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case Or(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case Plus(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case Minus(lhs, rhs) =>
-          val minusExpr =
-            matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case Times(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case Div(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case LessThan(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case Equals(lhs, rhs) =>
-          matchExpression(lhs, m)
-          matchExpression(rhs, m)
-        case ArrayRead(arr, index) =>
-          matchExpression(arr, m)
-          matchExpression(index, m)
-        case ArrayLength(arr) =>
-          matchExpression(arr, m)
+        case and: And =>
+          and.setType(TBoolean)
+          matchExpression(and.lhs, m)
+          matchExpression(and.rhs, m)
+        case or: Or =>
+          or.setType(TBoolean)
+          matchExpression(or.lhs, m)
+          matchExpression(or.rhs, m)
+        case plus: Plus =>
+          matchExpression(plus.lhs, m)
+          matchExpression(plus.rhs, m)
+          if(plus.lhs.getType == TString || plus.rhs.getType == TString)
+            plus.setType(TString)
+          else
+            plus.setType(TInt)
+        case minus: Minus=>
+          minus.setType(TInt)
+          matchExpression(minus.lhs, m)
+          matchExpression(minus.rhs, m)
+        case times: Times =>
+          times.setType(TInt)
+          matchExpression(times.lhs, m)
+          matchExpression(times.rhs, m)
+        case div: Div =>
+          div.setType(TInt)
+          matchExpression(div.lhs, m)
+          matchExpression(div.rhs, m)
+        case lt: LessThan =>
+          lt.setType(TBoolean)
+          matchExpression(lt.lhs, m)
+          matchExpression(lt.rhs, m)
+        case eq: Equals =>
+          eq.setType(TBoolean)
+          matchExpression(eq.lhs, m)
+          matchExpression(eq.rhs, m)
+        case ar: ArrayRead =>
+          ar.setType(TInt)
+          matchExpression(ar.arr, m)
+          matchExpression(ar.index, m)
+        case al: ArrayLength =>
+          al.setType(TInt)
+          matchExpression(al.arr, m)
         case mc: MethodCall =>
 
           val foo = matchExpression(mc.obj, m)
@@ -338,20 +350,22 @@ object NameAnalysis extends Pipeline[Program, Program] {
           }
           ret = foo
 
-        case New(tpe) =>
-          val sym = gScope.lookupClass(tpe.value)
+        case n: New =>
+          val sym = gScope.lookupClass(n.tpe.value)
           if (sym != None) {
-            tpe.setSymbol(sym.get)
-            tpe.setType(TObject(sym.get))
-            ret = tpe.getSymbol
+            n.tpe.setSymbol(sym.get)
+            n.tpe.setType(TObject(sym.get))
+            ret = n.tpe.getSymbol
+            n.setType(TObject(sym.get))
           } else { //If the class is not declared we cant instantiate it
-            fatal("Class not declared", tpe)
+            fatal("Class not declared", n.tpe)
           }
         case newArr: NewIntArray =>
           newArr.setType(findType(IntArrayType()))
           matchExpression(newArr.size, m)
-        case Not(expr) =>
-          matchExpression(expr, m)
+        case not: Not =>
+          not.setType(TBoolean)
+          matchExpression(not.expr, m)
         case thisExpr: This =>
           thisExpr.setSymbol(m.classSymbol)
           thisExpr.setType(TObject(m.classSymbol))

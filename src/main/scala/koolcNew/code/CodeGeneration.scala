@@ -9,10 +9,19 @@ import AbstractByteCodes.{New => _, _}
 import ByteCodes._
 import utils._
 
+import scala.collection.immutable.HashMap
+
 object CodeGeneration extends Pipeline[Program, Unit] {
 
   def run(ctx: Context)(prog: Program): Unit = {
     import ctx.reporter._
+
+    var varIndex = new HashMap[Int, Int]()
+
+
+    def slotFor(index: Int): Int = {
+      varIndex.get(index).getOrElse(-1)
+    }
 
     /** Writes the proper .class file in a given directory. An empty string for dir is equivalent to "./". */
     def generateClassFile(sourceName: String, ct: ClassDecl, dir: String): Unit = {
@@ -22,42 +31,45 @@ object CodeGeneration extends Pipeline[Program, Unit] {
       classFile.setSourceFile(sourceName)
       classFile.addDefaultConstructor
       //Add fields
-      for(v <- ct.vars){
+      for (v <- ct.vars) {
         val varSym = v.getSymbol
         val field = classFile.addField(convertType(varSym.getType), varSym.name)
       }
       //Add methods
-      for(m <- ct.methods){
+      for (m <- ct.methods) {
         val metSym = m.getSymbol
         val method = classFile.addMethod(convertType(metSym.getType), metSym.name, m.args.map(x => convertType(x.getSymbol.getType)))
-
+        println(metSym.name)
         generateMethodCode(method.codeHandler, m)
       }
-      classFile.writeToFile(dir+"/"+sourceName)
+
+      classFile.writeToFile(dir + "/" + sourceName + ".class")
     }
 
     /*Method for converting our types to CafeBabe types*/
-    def convertType(t: Type):String = {
+    def convertType(t: Type): String = {
       t match {
         case TInt =>
           "I"
         case TString =>
-          "LJava\\lang\\String;"
+          "Ljava/lang/String;"
         case TBoolean =>
           "Z"
         case TIntArray =>
           "[I"
         case TObject(clsSym) =>
-          "./"+clsSym.name+";" //Probably wrong
+          "L"+clsSym.name + ";" //Probably wrong
       }
     }
+
 
     def compileStatement(ch: CodeHandler, st: StatTree): CodeHandler = {
       st match {
         case Println(expr) =>
           ch << GetStatic("java/lang/System", "out", "Ljava/io/PrintStream;")
           compileExpression(ch, expr)
-          ch << InvokeVirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V") <<
+          //println(expr, convertType(expr.getType))
+          ch << InvokeVirtual("java/io/PrintStream", "println", "("+convertType(expr.getType)+")V") <<
             RETURN
         case If(expr, thn, els) =>
           val nElse = ch.getFreshLabel("nElse");
@@ -82,32 +94,32 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           ch << Label(nExit)
 
         case Block(stats) =>
-          for (stat <- stats)
+          for (stat <- stats){
             compileStatement(ch, stat)
+          }
           null
 
         case ArrayAssign(id, index, expr) =>
           compileExpression(ch, expr)
           compileExpression(ch, index)
-          ch << ALoad(id.getSymbol.id)
+          ch << ALoad(slotFor(id.getSymbol.id))
           ch << IASTORE
 
         case Assign(id, expr) =>
           val sym = id.getSymbol
           compileExpression(ch, expr)
           expr.getType match {
-            case TInt => ch << IStore(sym.id)
-            case TString => ch << AStore(sym.id)
-            case TBoolean => ch << IStore(sym.id)
-            case TObject(clsSym) => ch << AStore(sym.id)
+            case TInt => ch << IStore(slotFor(sym.id))
+            case TString => ch << AStore(slotFor(sym.id))
+            case TBoolean => ch << IStore(slotFor(sym.id))
+            case TObject(clsSym) => ch << AStore(slotFor(sym.id))
+            case TIntArray => ch << AStore(slotFor(sym.id))
           }
-        case _ =>
-          ch << ICONST_0
 
       }
     }
-    def compileExpression(ch: CodeHandler, e: ExprTree): String = {
-      val ret:Any = e match {
+    def compileExpression(ch: CodeHandler, e: ExprTree): CodeHandler = {
+      e match {
         case And(lhs, rhs) =>
           val nExit = ch.getFreshLabel("nExit");
           val nTrue = ch.getFreshLabel("nTrue")
@@ -129,18 +141,18 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           ch << Label(nExit)
           compileExpression(ch, rhs)
           ch << Label(nTrue)
-        case Plus(lhs, rhs) =>
-          if (lhs.getType == TInt && rhs.getType == TInt) {
-            compileExpression(ch, lhs)
-            compileExpression(ch, rhs)
-            ch << IADD
-          } else {
-            ch << DefaultNew("java/lang/StringBuilder")
-            compileExpression(ch, lhs)
-            compileExpression(ch, rhs)
-            ch << InvokeVirtual("java/lang/StringBuilder", "append", "Ljava/lang/String;Ljava/lang/String;V")
-          }
-        case Minus(lhs, rhs) =>
+        case Plus(lhs, rhs) if e.getType == TString =>
+          ch << DefaultNew("java/lang/StringBuilder")
+          compileExpression(ch, lhs)
+          ch << InvokeVirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+          compileExpression(ch, rhs)
+          ch << InvokeVirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+          ch << InvokeVirtual("java/lang/StringBuilder", "toString", "()Ljava/lang/String;")
+        case Plus(lhs,rhs) =>
+          compileExpression(ch, lhs)
+          compileExpression(ch, rhs)
+          ch << IADD
+        case Minus(lhs, rhs) =>1
           compileExpression(ch, lhs)
           compileExpression(ch, rhs)
           ch << ISUB
@@ -187,39 +199,35 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           compileExpression(ch, arr)
           ch << ARRAYLENGTH
         case mc: MethodCall =>
-          val objName:String = compileExpression(ch, mc.obj)
+          compileExpression(ch, mc.obj)
           val args = mc.args.map(arg => {
             compileExpression(ch, arg)
-            println(arg, arg.getType)
             convertType(arg.getType)
           })
 
           var argConcat = "("
-          for(arg <- args){
-            argConcat = argConcat+arg
+          for (arg <- args) {
+            argConcat = argConcat + arg
           }
-          argConcat = argConcat +")"
-          argConcat = argConcat+convertType(mc.getType)
-
-          ch << InvokeVirtual(objName, mc.meth.value, argConcat)
+          argConcat = argConcat + ")"
+          argConcat = argConcat + convertType(mc.getType)
+          ch << InvokeVirtual(mc.obj.getType.toString, mc.meth.value, argConcat)
         case New(tpe) =>
           ch << DefaultNew(tpe.value)
         case newArr: NewIntArray =>
           compileExpression(ch, newArr.size)
           ch << NEWARRAY
-          case Not(expr) =>
+        case Not(expr) =>
           ch << ICONST_1
           compileExpression(ch, expr)
           ch << ISUB
         case thisExpr: This =>
           ch << ALOAD_0
-          thisExpr.getType
         case id: Identifier =>
           id.getType match {
-            case TInt | TBoolean => ch << ILoad(id.getSymbol.id)
-            case TString | TObject(_) | TIntArray => ch << ALoad(id.getSymbol.id)
+            case TInt | TBoolean => ch << ILoad(slotFor(id.getSymbol.id))
+            case TString | TObject(_) | TIntArray => ch << ALoad(slotFor(id.getSymbol.id))
           }
-          id.getType
         case IntLit(value) =>
           ch << Ldc(value)
         case StringLit(value) =>
@@ -228,27 +236,26 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           ch << ICONST_1
         case False() =>
           ch << ICONST_0
-        case _ =>
-          ch << ICONST_0
+
+
       }
-      ret.toString
+
     }
 
     // a mapping from variable symbols to positions in the local variables
     // of the stack frame
     def generateMethodCode(ch: CodeHandler, mt: MethodDecl): Unit = {
       val methSym = mt.getSymbol
+      var index = 1
 
-
-
-      mt.args.zipWithIndex foreach {case (arg,i) =>
-
-        arg.id.getType match {
-          case TInt | TBoolean => ch << ArgLoad(i) << IStore(arg.id.getSymbol.id)
-          case _ => ch << ArgLoad(i) << IStore(arg.id.getSymbol.id)
-        }
+      for(arg <- mt.args){
+        varIndex += Tuple2(arg.getSymbol.id, index)
+        index = index + 1
       }
 
+      for(v <- mt.vars){
+        varIndex += Tuple2(v.getSymbol.id, ch.getFreshVar)
+      }
 
       for (stat <- mt.stats) {
         compileStatement(ch, stat)
@@ -269,33 +276,41 @@ object CodeGeneration extends Pipeline[Program, Unit] {
     }
 
     def generateMainMethodCode(ch: CodeHandler, stmts: List[StatTree], cname: String): Unit = {
-      for(stat <- stmts){
+
+      for (stat <- stmts) {
+        println(stat)
         compileStatement(ch, stat)
       }
       // TODO: Emit code
       ch.freeze
     }
 
-    val outDir = ctx.outDir.map(_.getPath+"/").getOrElse("./")
+    val outDir = ctx.outDir.map(_.getPath + "/").getOrElse("./")
 
     val f = new java.io.File(outDir)
     if (!f.exists()) {
       f.mkdir()
     }
-
     val sourceName = ctx.file.getName
+
 
     // output code
     prog.classes foreach {
-      ct => generateClassFile(sourceName, ct, outDir)
+      ct => generateClassFile(ct.id.value, ct, outDir)
     }
 
-    val mainClass = new ClassFile("main")
+    val mainClass = new ClassFile(prog.main.id.value)
+
+    mainClass.setSourceFile(sourceName)
+    mainClass.addDefaultConstructor
     val ch: CodeHandler = mainClass.addMainMethod.codeHandler
-    generateMainMethodCode(ch, prog.main.stats, "main")
-    mainClass.writeToFile("main")
+    generateMainMethodCode(ch, prog.main.stats, prog.main.id.value)
+    mainClass.writeToFile(prog.main.id.value + ".class")
     // Now do the main method
     // ...
+
+
+
   }
 
 }
