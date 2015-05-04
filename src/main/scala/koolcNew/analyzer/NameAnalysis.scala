@@ -15,6 +15,8 @@ object NameAnalysis extends Pipeline[Program, Program] {
 
     val gScope = new GlobalScope
 
+
+
     gScope.mainClass = new ClassSymbol(prog.main.id.value)
     prog.main.setSymbol(gScope.mainClass)
     prog.main.id.setSymbol(gScope.mainClass)
@@ -48,6 +50,12 @@ object NameAnalysis extends Pipeline[Program, Program] {
         }
         matchExpression(m.retExpr, m.getSymbol)
       }
+    }
+
+    //Set up main
+    for(stat <- prog.main.stats){
+      matchStatement(stat, new MethodSymbol("main", prog.main.getSymbol))
+
     }
 
     def createClsSym(cls: ClassDecl): ClassSymbol = {
@@ -357,6 +365,10 @@ object NameAnalysis extends Pipeline[Program, Program] {
             ret = id.getSymbol
           }else
           error("Variable not declared", id)
+        case il: IntLit => il.setType(TInt)
+        case sl: StringLit => sl.setType(TString)
+        case bt: True => bt.setType(TBoolean)
+        case bf: False => bf.setType(TBoolean)
         case _ =>
       }
       ret
