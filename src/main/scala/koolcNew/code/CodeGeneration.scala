@@ -139,7 +139,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
         ch << IStore(slotFor(id.getSymbol.id))
       case TString | TObject(_) | TIntArray =>
         compileExpression(expr)
-        ch << IStore(slotFor(id.getSymbol.id))
+        ch << AStore(slotFor(id.getSymbol.id))
     }
 
     def compileExpression(e: ExprTree): Unit = {
@@ -168,9 +168,9 @@ object CodeGeneration extends Pipeline[Program, Unit] {
         case Plus(lhs, rhs) if e.getType == TString =>
           ch << DefaultNew("java/lang/StringBuilder")
           compileExpression(lhs)
-          ch << InvokeVirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+          appendString(lhs)
           compileExpression(rhs)
-          ch << InvokeVirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+          appendString(rhs)
           ch << InvokeVirtual("java/lang/StringBuilder", "toString", "()Ljava/lang/String;")
         case Plus(lhs,rhs) =>
           compileExpression(lhs)
@@ -260,6 +260,14 @@ object CodeGeneration extends Pipeline[Program, Unit] {
 
       }
 
+
+
+      def appendString(expr: ExprTree) = {
+        expr.getType match {
+          case TBoolean | TInt => ch << InvokeVirtual("java/lang/StringBuilder", "append", "(I)Ljava/lang/StringBuilder;")
+          case TObject(_) | TString | TIntArray => ch << InvokeVirtual("java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;")
+        }
+      }
     }
 
     // a mapping from variable symbols to positions in the local variables
