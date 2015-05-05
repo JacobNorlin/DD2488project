@@ -16,14 +16,17 @@ object CodeGeneration extends Pipeline[Program, Unit] {
   def run(ctx: Context)(prog: Program): Unit = {
     import ctx.reporter._
 
-    var varIndex = new HashMap[Int, Int]()
+    var varMap = new HashMap[Int, Int]()
     var currentMethod:MethodSymbol = null
     var ch: CodeHandler = null
 
 
 
     def slotFor(index: Int): Int = {
-      varIndex.get(index).getOrElse(-1)
+      varMap get(index) match {
+        case Some(id) => id
+        case None => fatal("this should never happen")
+      }
     }
 
     /** Writes the proper .class file in a given directory. An empty string for dir is equivalent to "./". */
@@ -36,7 +39,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
       //Add fields
       for (v <- ct.vars) {
         val varSym = v.getSymbol
-        val field = classFile.addField(convertType(varSym.getType), varSym.name)
+        classFile.addField(convertType(varSym.getType), varSym.name)
       }
       //Add methods
       for (m <- ct.methods) {
@@ -174,9 +177,6 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           compileExpression(rhs)
           ch << IADD
         case Minus(lhs, rhs) =>
-
-          compileExpression(lhs)
-          compileExpression(rhs)
           compileExpression(lhs)
           compileExpression(rhs)
           ch << ISUB
@@ -270,13 +270,15 @@ object CodeGeneration extends Pipeline[Program, Unit] {
       currentMethod = methSym
       ch = ch2
 
+      varMap = varMap.empty
+
       for(arg <- mt.args){
-        varIndex += Tuple2(arg.getSymbol.id, index)
+        varMap += Tuple2(arg.getSymbol.id, index)
         index = index + 1
       }
 
       for(v <- mt.vars){
-        varIndex += Tuple2(v.getSymbol.id, ch.getFreshVar)
+        varMap += Tuple2(v.getSymbol.id, ch.getFreshVar)
       }
 
       for (stat <- mt.stats) {
