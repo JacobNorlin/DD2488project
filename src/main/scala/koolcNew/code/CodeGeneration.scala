@@ -103,7 +103,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
         case ArrayAssign(id, index, expr) =>
           compileExpression(ch, expr)
           compileExpression(ch, index)
-          ch << ALoad(slotFor(id.getSymbol.id))
+          loadValue(id).foldLeft(ch)(_<<_)
           ch << IASTORE
 
         case Assign(id, expr) =>
@@ -115,17 +115,18 @@ object CodeGeneration extends Pipeline[Program, Unit] {
     }
 
     def loadValue(id: Identifier): List[AbstractByteCodeGenerator] = {
+      //println(id, id.getType, slotFor(id.getSymbol.id),  currentMethod.lookupVar(id.value))
       id.getType match {
         //Aload(0) is to load this, as the class we are getting from
-        case _ if currentMethod.lookupVar(id.value) == None => println("kebab")
+        case _ if currentMethod.lookupVar(id.value) == None =>
           List(ALoad(0), GetField(currentMethod.classSymbol.name, id.value, convertType(id.getType)))
         case TInt | TBoolean => List(ILoad(slotFor(id.getSymbol.id)))
         case TString | TObject(_) | TIntArray => List(ALoad(slotFor(id.getSymbol.id)))
       }
     }
-
+    //Might be an issue with loading the class after evaluating the value to be stored...
     def storeValue(id: Identifier):List[AbstractByteCodeGenerator] = id.getType match {//Aload(0) is to load this, as the class we are storing in
-      case _ if currentMethod.lookupVar(id.value) == None => println("hej")
+      case _ if currentMethod.lookupVar(id.value) == None => //println(id, id.getType)
         List(ALoad(0), PutField(currentMethod.classSymbol.name, id.value, convertType(id.getType)))
       case TInt | TBoolean => List(IStore(slotFor(id.getSymbol.id)))
       case TString | TObject(_) | TIntArray => List(IStore(slotFor(id.getSymbol.id)))
