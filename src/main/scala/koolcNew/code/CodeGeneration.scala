@@ -166,7 +166,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           compileExpression(ch, lhs)
           compileExpression(ch, rhs)
           ch << IADD
-        case Minus(lhs, rhs) =>1
+        case Minus(lhs, rhs) =>
           compileExpression(ch, lhs)
           compileExpression(ch, rhs)
           ch << ISUB
