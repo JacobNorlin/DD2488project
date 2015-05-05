@@ -239,7 +239,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           ch << DefaultNew(tpe.value)
         case newArr: NewIntArray =>
           compileExpression(newArr.size)
-          ch << NewArray("I")
+          ch << NewArray(10)
         case Not(expr) =>
           ch << ICONST_1
           compileExpression(expr)
