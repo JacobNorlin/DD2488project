@@ -101,8 +101,7 @@ object TypeChecking extends Pipeline[Program, Program] {
           TBoolean
 
 
-      } // TODO: Compute type for each kind of expression
-     // println(expr, tpe)
+      }
       expr.setType(tpe)
       // Check result and return a valid type in case of error
       if (expected.isEmpty) {

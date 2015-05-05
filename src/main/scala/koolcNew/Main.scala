@@ -11,7 +11,8 @@ import ast._
 
 object Main {
 
-  var pipeline = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking andThen CodeGeneration
+  var tokenFlag = false;
+  var printFlag = false;
 
   def processOptions(args: Array[String]): Context = {
 
@@ -24,12 +25,12 @@ object Main {
         case "-d" :: out :: args =>
           outDir = Some(new File(out))
           processOption(args)
-
-        case "--tokens" :: args =>{
+        case "--tokens" :: args =>
+          tokenFlag = true;
           processOption(args)
-          pipeline = Lexer andThen PrintTokens andThen Parser andThen CodeGeneration
-        }
-
+        case "--print" :: args =>
+          printFlag = true
+          processOption(args)
 
         case f ::args =>
           files = new File(f) :: files
@@ -54,13 +55,27 @@ object Main {
 
   def main(args: Array[String]) {
 
+    val pipelineTokens= Lexer andThen PrintTokens andThen Parser andThen NameAnalysis andThen TypeChecking
+    val pipelineFrontEnd = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking
+    val pipelineBackend = pipelineFrontEnd andThen CodeGeneration
+
 
     val ctx = processOptions(args)
 
-    val program = pipeline.run(ctx)(ctx.file)
+    var program: Trees.Program = null
 
+    if(tokenFlag)
+      program = pipelineTokens.run(ctx)(ctx.file)
 
-    //println(Printer(program))
+    if(printFlag){
+      if(program == null)
+        program = pipelineFrontEnd.run(ctx)(ctx.file)
+      println(Printer(program))
+    }
+    if(program == null){
+      pipelineBackend.run(ctx)(ctx.file)
+    }
+
 
 
   }

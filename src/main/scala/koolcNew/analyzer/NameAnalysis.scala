@@ -399,11 +399,6 @@ object NameAnalysis extends Pipeline[Program, Program] {
         }
       }
     }
-    // Step 2: Attach symbols to identifiers (except method calls) in method bodies
-
-    // (Step 3:) Print tree with symbol ids for debugging
-
-    // Make sure you check for all constraints
 
     prog
   }

@@ -80,10 +80,15 @@ object Symbols {
     var argList: List[VariableSymbol] = Nil
     var overridden: Option[MethodSymbol] = None
 
+
+    /*This only checks local variables, as that was convenient for the codegeneration
+    To check everything do something like:
+
+    methodSymbol.lookupVar(value).getOrElse(methodSymbol.classSymbol.lookupVar(value).orNull))
+     */
     def lookupVar(n: String): Option[VariableSymbol] = {
       val p = params.getOrElse(n, None)
       val m = members.getOrElse(n, None)
-      //println("Looking up: "+n+" found: ",p,m,params)
       var r: Option[VariableSymbol] = None
 
       if (p != None)
