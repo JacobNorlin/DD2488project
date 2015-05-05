@@ -229,8 +229,8 @@ object NameAnalysis extends Pipeline[Program, Program] {
         for (variable <- met.vars) {
           val varName = variable.id.value
           //Look for duplicate var defs
-          val dupVar = metSym.lookupVar(varName)
-          if (dupVar != None) {
+          val dupVar = metSym.lookupVar(varName).getOrElse[VariableSymbol](metSym.classSymbol.lookupVar(varName).orNull)
+          if (dupVar != null) {
             error("Duplicate var definition", variable)
           }
           val vSym = new VariableSymbol(varName)
@@ -267,9 +267,9 @@ object NameAnalysis extends Pipeline[Program, Program] {
           for (stat <- stats)
             matchStatement(stat, m)
         case Assign(id, expr) =>
-          val varExists = m.lookupVar(id.value) //Will also check class, and parents and whatevs
-          if (varExists != None) {
-            id.setSymbol(varExists.get)
+          val varExists = m.lookupVar(id.value).getOrElse[VariableSymbol](m.classSymbol.lookupVar(id.value).orNull)
+          if (varExists != null) {
+            id.setSymbol(varExists)
 
 
           } else {
@@ -280,8 +280,8 @@ object NameAnalysis extends Pipeline[Program, Program] {
           matchExpression(expr, m)
         case ArrayAssign(_, _, _) =>
           val arrAssStmt = statement.asInstanceOf[ArrayAssign]
-          val sym = m.lookupVar(arrAssStmt.id.value)
-          if (sym != None) arrAssStmt.id.setSymbol(sym.get)
+          val sym = m.lookupVar(arrAssStmt.id.value).getOrElse[VariableSymbol](m.classSymbol.lookupVar(arrAssStmt.id.value).orNull)
+          if (sym != null) arrAssStmt.id.setSymbol(sym)
           else fatal("Array not declared", arrAssStmt.id)
           matchExpression(arrAssStmt.expr, m)
           matchExpression(arrAssStmt.index, m)
@@ -372,13 +372,14 @@ object NameAnalysis extends Pipeline[Program, Program] {
           ret = thisExpr.getSymbol
         case id: Identifier =>
           //Check if variable exists
-          val sym = m.lookupVar(id.value)
-          if (sym != None) {
-            sym.get.used = true
-            id.setSymbol(sym.get)
+          val sym = m.lookupVar(id.value).getOrElse[VariableSymbol](m.classSymbol.lookupVar(id.value).orNull)
+          if (sym != null) {
+            sym.used = true
+            id.setSymbol(sym)
             ret = id.getSymbol
-          }else
-          error("Variable not declared", id)
+          }else{
+            error("Variable not declared", id)
+          }
         case il: IntLit => il.setType(TInt)
         case sl: StringLit => sl.setType(TString)
         case bt: True => bt.setType(TBoolean)

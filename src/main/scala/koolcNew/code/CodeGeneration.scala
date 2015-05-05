@@ -17,6 +17,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
     import ctx.reporter._
 
     var varIndex = new HashMap[Int, Int]()
+    var currentMethod:MethodSymbol = null
 
 
     def slotFor(index: Int): Int = {
@@ -118,6 +119,8 @@ object CodeGeneration extends Pipeline[Program, Unit] {
 
       }
     }
+
+
     def compileExpression(ch: CodeHandler, e: ExprTree): CodeHandler = {
       e match {
         case And(lhs, rhs) =>
@@ -192,9 +195,8 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           ch << Label(nExit)
         case ArrayRead(arr, index) =>
           compileExpression(ch, arr)
-          ch << ALOAD
           compileExpression(ch, index)
-          ch << LDC
+          ch << IALOAD
         case ArrayLength(arr) =>
           compileExpression(ch, arr)
           ch << ARRAYLENGTH
@@ -225,6 +227,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           ch << ALOAD_0
         case id: Identifier =>
           id.getType match {
+            case _ if currentMethod.lookupVar(id.value) == None => ch << GetField(currentMethod.classSymbol.name, id.value, convertType(id.getType))
             case TInt | TBoolean => ch << ILoad(slotFor(id.getSymbol.id))
             case TString | TObject(_) | TIntArray => ch << ALoad(slotFor(id.getSymbol.id))
           }
@@ -247,6 +250,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
     def generateMethodCode(ch: CodeHandler, mt: MethodDecl): Unit = {
       val methSym = mt.getSymbol
       var index = 1
+      currentMethod = methSym
 
       for(arg <- mt.args){
         varIndex += Tuple2(arg.getSymbol.id, index)

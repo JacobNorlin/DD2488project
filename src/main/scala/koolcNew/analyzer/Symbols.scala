@@ -90,8 +90,7 @@ object Symbols {
         r = Some(p.asInstanceOf[VariableSymbol])
       else if (m != None)
         r = Some(m.asInstanceOf[VariableSymbol])
-      else
-        r = classSymbol.lookupVar(n)
+
       r
     }
   }
