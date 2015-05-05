@@ -71,9 +71,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
         case Println(expr) =>
           ch << GetStatic("java/lang/System", "out", "Ljava/io/PrintStream;")
           compileExpression(expr)
-          //println(expr, convertType(expr.getType))
-          ch << InvokeVirtual("java/io/PrintStream", "println", "("+convertType(expr.getType)+")V") <<
-            RETURN
+          ch << InvokeVirtual("java/io/PrintStream", "println", "("+convertType(expr.getType)+")V")
         case If(expr, thn, els) =>
           val nElse = ch.getFreshLabel("nElse");
           val nAfter = ch.getFreshLabel("nAfter")
@@ -176,6 +174,9 @@ object CodeGeneration extends Pipeline[Program, Unit] {
           compileExpression(rhs)
           ch << IADD
         case Minus(lhs, rhs) =>
+
+          compileExpression(lhs)
+          compileExpression(rhs)
           compileExpression(lhs)
           compileExpression(rhs)
           ch << ISUB
@@ -302,6 +303,7 @@ object CodeGeneration extends Pipeline[Program, Unit] {
         println(stat)
         compileStatement(stat)
       }
+      ch << RETURN
       // TODO: Emit code
       ch.freeze
     }
