@@ -289,7 +289,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
       false
     }
 
-    def matchExpression(expr: ExprTree, m: MethodSymbol): Symbol = {
+    def matchExpression(expr: ExprTree, m: MethodSymbol): Unit = {
       var ret:Symbol = null
       expr match {
         case and: And =>
@@ -337,7 +337,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
         case mc: MethodCall =>
 
           val foo = matchExpression(mc.obj, m)
-          val cls = gScope.lookupClass(foo.getType.toString)
+          val cls = gScope.lookupClass(mc.obj.getType.toString)
           if(cls != None){
             val met = cls.get.lookupMethod(mc.meth.value)
             mc.setType(met.get.getType)
@@ -348,7 +348,7 @@ object NameAnalysis extends Pipeline[Program, Program] {
           for (arg <- mc.args) {
             matchExpression(arg, m)
           }
-          ret = foo
+
 
         case n: New =>
           val sym = gScope.lookupClass(n.tpe.value)
