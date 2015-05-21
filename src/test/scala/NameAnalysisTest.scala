@@ -37,6 +37,7 @@ class NameAnalysisTest extends FlatSpec{
         val refNames = getAllNames(refProgram)
 
 
+
         /* This counts the number of occurences of each symbol. Since where the symbol ids
         are attached  varies between the reference compiler and our compiler, this should serve
         as a decent approximation of similarity between symbols. If number of symbol occurences
