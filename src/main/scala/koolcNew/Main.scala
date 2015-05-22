@@ -2,6 +2,7 @@ package koolcNew
 
 import koolcNew.analyzer.NameAnalysis
 import koolcNew.code.CodeGeneration
+import koolcNew.dataflow.Graph
 import utils._
 import java.io.File
 import koolcNew.analyzer.TypeChecking
@@ -56,7 +57,7 @@ object Main {
   def main(args: Array[String]) {
 
     val pipelineTokens= Lexer andThen PrintTokens andThen Parser andThen NameAnalysis andThen TypeChecking
-    val pipelineFrontEnd = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking
+    val pipelineFrontEnd = Lexer andThen Parser andThen NameAnalysis andThen TypeChecking andThen Graph
     val pipelineBackend = pipelineFrontEnd andThen CodeGeneration
 
 
