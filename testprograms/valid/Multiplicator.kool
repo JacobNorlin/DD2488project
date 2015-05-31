@@ -6,6 +6,7 @@ object Multiplicator {
     else{
       println("Fail..");
     }
+    println("fuck");
   }
   
 }

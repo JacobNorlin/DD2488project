@@ -2,7 +2,7 @@ package koolcNew.dataflow
 
 import koolcNew.ast.Trees._
 import koolcNew.dataflow.Edges._
-import koolcNew.dataflow.Nodes.Node
+import koolcNew.dataflow.Nodes.{ControlFlowNode, Node}
 import koolcNew.utils.{Context, Pipeline}
 
 object Graph extends Pipeline[Program, Program] {
@@ -21,6 +21,7 @@ object Graph extends Pipeline[Program, Program] {
       override def toString: String = "{"+start+", "+end+" }"
     }
 
+
     def emptyGraph() = {
       ControlFlowGraph(None, None, List(), List())
     }
@@ -33,27 +34,39 @@ object Graph extends Pipeline[Program, Program] {
       ControlFlowGraph(cfg1.start, cfg2.end, cfg1.nodes ++ cfg2.nodes, cfg1.edges ++ cfg2.edges)
     }
 
-    val startNode = Nodes.ControlFlowNode()
-    val endNode = Nodes.ControlFlowNode()
-    val startEdge = Edge(startNode, endNode)
-    val graph = ControlFlowGraph(Some(startNode), Some(endNode), List(startNode, endNode), List(startEdge))
-
-    var previousNode = startNode
-
-    buildGraph(prog)
+    val startNode: Node = Nodes.ControlFlowNode("start")
+    val endNode = Nodes.ControlFlowNode("end")
+    var graph = ControlFlowGraph(Some(startNode), Some(endNode), List(startNode, endNode), List())
+    var functionMap = Map[Tuple2[String, String], ControlFlowGraph]()
 
 
-    def buildGraph(prog: Program): Unit = {
+    graph = buildGraph(prog)
+
+
+
+    def buildGraph(prog: Program): ControlFlowGraph = {
       val metGraphs = prog.classes.flatMap(cls => {
-        cls.methods.map(met => decomposeMethod(met))
+        cls.methods.map(met => {
+          val g = decomposeMethod(met)
+          functionMap = functionMap + ((cls.id.value, met.id.value) -> g)
+          g
+        })
+
       })
 
-      val progGraph = prog.main.stats.map(stat => decomposeStat(stat, graph.start.get)).
-        foldLeft(graph)(_ :: _)
 
-      for(node <- progGraph.nodes)
-        println(node)
+      var previousNode = startNode
 
+      //Create a graph for each statement
+      val progGraph = prog.main.stats.map(stat => {
+        val g = decomposeStat(stat, previousNode)
+        previousNode = g.end.get
+        g
+      }).foldRight(graph)((cfg1, cfg2) => { //Add all graphs together
+        cfg1 :: cfg2
+      })
+
+      progGraph
 
     }
 
@@ -69,9 +82,9 @@ object Graph extends Pipeline[Program, Program] {
             List(Edge(previousNode, assignNode)))
           callGraph match {
             case Some(g) =>
-              g :: graph
+              g :: gr
             case None =>
-              graph
+              gr
           }
         case ArrayAssign(id, index, expr) =>
           val callGraph = decomposeExpression(expr)
@@ -81,9 +94,9 @@ object Graph extends Pipeline[Program, Program] {
             List(Edge(previousNode, arrAssignNode)))
           callGraph match {
             case Some(g) =>
-              g :: graph
+              g :: gr
             case None =>
-              graph
+              gr
           }
         case Println(expr) =>
           val callGraph = decomposeExpression(expr)
@@ -93,9 +106,9 @@ object Graph extends Pipeline[Program, Program] {
             List(Edge(previousNode, exprNode)))
           callGraph match {
             case Some(g) =>
-              g :: graph
+              g :: gr
             case None =>
-              graph
+              gr
           }
         case While(expr, stat) =>
           val callGraph = decomposeExpression(expr)
@@ -109,9 +122,9 @@ object Graph extends Pipeline[Program, Program] {
             List(b1, b2) ++ whileGraph.edges)
           callGraph match {
             case Some(g) =>
-              g :: graph
+              g :: gr
             case None =>
-              graph
+              gr
           }
         case If(expr, thn, els) =>
           val callGraph = decomposeExpression(expr)
@@ -120,29 +133,33 @@ object Graph extends Pipeline[Program, Program] {
           val b1 = Edge(previousNode, trueNode)
           val b2 = Edge(previousNode, falseNode)
           val thenGraph = decomposeStat(thn, trueNode)
+          println("THENGRAPH", thenGraph)
           val elsGraph = els match {
             case Some(stat) => decomposeStat(stat, falseNode)
             case None => emptyGraph()
           }
           val mergeNode = Nodes.Merge()
+          val merge1 = Edge(thenGraph.end.getOrElse(trueNode), mergeNode)
+          val merge2 = Edge(elsGraph.end.getOrElse(falseNode), mergeNode)
           val gr = ControlFlowGraph(Some(previousNode), Some(mergeNode),
-            List(trueNode, falseNode) ++ thenGraph.nodes ++ elsGraph.nodes,
-            List(b1, b2) ++ thenGraph.edges ++ elsGraph.edges)
+            List(trueNode, falseNode, mergeNode) ++ thenGraph.nodes ++ elsGraph.nodes,
+            List(b1, b2, merge1, merge2) ++ thenGraph.edges ++ elsGraph.edges)
           callGraph match {
             case Some(g) =>
-              g :: graph
+              g :: gr
             case None =>
-              graph
+              gr
           }
 
         case Block(stats) =>
           var localPrev = previousNode
+          println("Starting new BLOCK")
           stats.map(stat => {
             val g = decomposeStat(stat, localPrev)
-            println(stat, g)
+            println(g)
             localPrev = g.end.get
             g
-          }).foldLeft(emptyGraph())(_ :: _) //maybe foldright
+          }).foldRight(new ControlFlowGraph(Some(localPrev), None, List(), List()))(_ :: _)
       }
 
     }
@@ -150,14 +167,16 @@ object Graph extends Pipeline[Program, Program] {
 
     def decomposeExpression(expr: ExprTree): Option[ControlFlowGraph]= expr match {
       case MethodCall(obj, meth, args) =>
-        Some(decomposeMethod(prog.classes.find(cls => cls.id.value == obj.getType.toString).get.methods.find(met => met.id.value == meth.value).get))
+        val clsName = prog.classes.find(cls => cls.id.value==obj.getType.toString).get
+        val metName = clsName.methods.find(met => met.id.value == meth.value).get.id.value
+        functionMap.get((clsName.id.value, metName))
       case _ => None
     }
 
     def decomposeMethod(meth: MethodDecl): ControlFlowGraph = {
       meth.stats.map(stat => {
-        decomposeStat(stat, new Nodes.ControlFlowNode())
-      }).foldLeft(emptyGraph())(_ :: _)
+        decomposeStat(stat, new Nodes.ControlFlowNode(""))
+      }).foldRight(new ControlFlowGraph(Some(new ControlFlowNode("")), None, List(), List()))(_ :: _)
 
     }
 

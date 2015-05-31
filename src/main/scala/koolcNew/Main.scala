@@ -74,7 +74,7 @@ object Main {
       println(Printer(program))
     }
     if(program == null){
-      pipelineBackend.run(ctx)(ctx.file)
+      pipelineFrontEnd.run(ctx)(ctx.file)
     }
 
 

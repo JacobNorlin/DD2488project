@@ -12,7 +12,7 @@ object Nodes {
   case class ArrayAssign(id: Identifier, expr: ExprTree, index: ExprTree) extends Node
   case class Assign(id: Identifier, expr: ExprTree) extends Node
   case class Merge() extends Node
-  case class ControlFlowNode() extends Node
+  case class ControlFlowNode(name: String) extends Node
 
   
 }
