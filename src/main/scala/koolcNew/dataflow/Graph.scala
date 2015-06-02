@@ -16,9 +16,14 @@ object Graph extends Pipeline[Program, Program] {
                                  edges: List[Edge]
                                  ) {
       def +(node: Node) = addNode(this, node)
+      def ++(edge: Edge) = addEdge(this, edge)
 
       def ::(cfg: ControlFlowGraph) = append(this, cfg)
       override def toString: String = "{"+start+", "+end+" }"
+    }
+
+    def addEdge(cfg: ControlFlowGraph, edge: Edge): ControlFlowGraph ={
+      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges ++ List(edge))
     }
 
 
@@ -37,22 +42,30 @@ object Graph extends Pipeline[Program, Program] {
     val startNode: Node = Nodes.ControlFlowNode("start")
     val endNode = Nodes.ControlFlowNode("end")
     var graph = ControlFlowGraph(Some(startNode), Some(endNode), List(startNode, endNode), List())
-    var functionMap = Map[Tuple2[String, String], ControlFlowGraph]()
-
+    var methodMap = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph]()
 
     graph = buildGraph(prog)
+    println("Graph", graph)
 
 
 
     def buildGraph(prog: Program): ControlFlowGraph = {
+
+      for(cls <- prog.classes){
+        for(met <- cls.methods){
+          val start = new ControlFlowNode(met.id.value+"Start")
+          val end = new ControlFlowNode(met.id.value+"End")
+          methodMap = methodMap + ((cls, met) -> new ControlFlowGraph(Some(start), Some(end), List(), List()))
+        }
+      }
+
+
       val metGraphs = prog.classes.flatMap(cls => {
         cls.methods.map(met => {
-          val g = decomposeMethod(met)
-          functionMap = functionMap + ((cls.id.value, met.id.value) -> g)
-          g
+          decomposeMethod(methodMap.get((cls,met)).get, met)
         })
-
       })
+
 
 
       var previousNode = startNode
@@ -65,6 +78,10 @@ object Graph extends Pipeline[Program, Program] {
       }).foldRight(graph)((cfg1, cfg2) => { //Add all graphs together
         cfg1 :: cfg2
       })
+
+      for(met <- metGraphs){
+        println(met.edges)
+      }
 
       progGraph
 
@@ -82,7 +99,7 @@ object Graph extends Pipeline[Program, Program] {
             List(Edge(previousNode, assignNode)))
           callGraph match {
             case Some(g) =>
-              g :: gr
+              (g :: gr) ++ Edge(previousNode, g.start.get)
             case None =>
               gr
           }
@@ -94,7 +111,7 @@ object Graph extends Pipeline[Program, Program] {
             List(Edge(previousNode, arrAssignNode)))
           callGraph match {
             case Some(g) =>
-              g :: gr
+              g :: gr ++ Edge(previousNode, g.start.get)
             case None =>
               gr
           }
@@ -106,7 +123,7 @@ object Graph extends Pipeline[Program, Program] {
             List(Edge(previousNode, exprNode)))
           callGraph match {
             case Some(g) =>
-              g :: gr
+              g :: gr ++ Edge(previousNode, g.start.get)
             case None =>
               gr
           }
@@ -122,7 +139,7 @@ object Graph extends Pipeline[Program, Program] {
             List(b1, b2) ++ whileGraph.edges)
           callGraph match {
             case Some(g) =>
-              g :: gr
+              g :: gr ++ Edge(previousNode, g.start.get)
             case None =>
               gr
           }
@@ -146,7 +163,7 @@ object Graph extends Pipeline[Program, Program] {
             List(b1, b2, merge1, merge2) ++ thenGraph.edges ++ elsGraph.edges)
           callGraph match {
             case Some(g) =>
-              g :: gr
+              g :: gr ++ Edge(previousNode, g.start.get)
             case None =>
               gr
           }
@@ -167,16 +184,20 @@ object Graph extends Pipeline[Program, Program] {
 
     def decomposeExpression(expr: ExprTree): Option[ControlFlowGraph]= expr match {
       case MethodCall(obj, meth, args) =>
-        val clsName = prog.classes.find(cls => cls.id.value==obj.getType.toString).get
-        val metName = clsName.methods.find(met => met.id.value == meth.value).get.id.value
-        functionMap.get((clsName.id.value, metName))
+        val clsDecl = prog.classes.find(cls => cls.id.value==obj.getType.toString).get
+        val metDecl = clsDecl.methods.find(met => met.id.value == meth.value).get
+        methodMap.get((clsDecl, metDecl))
       case _ => None
     }
 
-    def decomposeMethod(meth: MethodDecl): ControlFlowGraph = {
+    def decomposeMethod(base: ControlFlowGraph, meth: MethodDecl): ControlFlowGraph = {
+
+      var previousNode = base.start.get
       meth.stats.map(stat => {
-        decomposeStat(stat, new Nodes.ControlFlowNode(""))
-      }).foldRight(new ControlFlowGraph(Some(new ControlFlowNode("")), None, List(), List()))(_ :: _)
+        val g = decomposeStat(stat, previousNode)
+        previousNode = g.end.get
+        g
+      }).foldRight(base)(_ :: _)
 
     }
 
