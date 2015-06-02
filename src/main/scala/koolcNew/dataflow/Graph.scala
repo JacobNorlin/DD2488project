@@ -39,8 +39,8 @@ object Graph extends Pipeline[Program, Program] {
       ControlFlowGraph(cfg1.start, cfg2.end, cfg1.nodes ++ cfg2.nodes, cfg1.edges ++ cfg2.edges)
     }
 
-    val startNode: Node = Nodes.ControlFlowNode("start")
-    val endNode = Nodes.ControlFlowNode("end")
+    val startNode: Node = Nodes.ControlFlowNode(None, "start", None)
+    val endNode = Nodes.ControlFlowNode(None, "end", None)
     var graph = ControlFlowGraph(Some(startNode), Some(endNode), List(startNode, endNode), List())
     var methodMap = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph]()
 
@@ -50,21 +50,13 @@ object Graph extends Pipeline[Program, Program] {
 
 
     def buildGraph(prog: Program): ControlFlowGraph = {
-
-      for(cls <- prog.classes){
-        for(met <- cls.methods){
-          val start = new ControlFlowNode(met.id.value+"Start")
-          val end = new ControlFlowNode(met.id.value+"End")
-          methodMap = methodMap + ((cls, met) -> new ControlFlowGraph(Some(start), Some(end), List(), List()))
-        }
-      }
-
-
-      val metGraphs = prog.classes.flatMap(cls => {
-        cls.methods.map(met => {
-          decomposeMethod(methodMap.get((cls,met)).get, met)
-        })
-      })
+//
+//      val metGraphs = prog.classes.flatMap(cls => {
+//        cls.methods.map(met => {
+//          val metGraph = decomposeMethod(ControlFlowGraph(Some(ControlFlowNode(None, "", None)), Some(ControlFlowNode(None, "", None)), List(), List()), met)
+//          methodMap = methodMap + ((cls, met) -> metGraph)
+//        })
+//      })
 
 
 
@@ -79,98 +71,99 @@ object Graph extends Pipeline[Program, Program] {
         cfg1 :: cfg2
       })
 
-      for(met <- metGraphs){
-        println(met.edges)
-      }
-
       progGraph
 
     }
 
 
+      def setNextNode(trg: Node, next: Node): Unit = {
+        trg match {
+          case exprNode: Nodes.Expression =>
+            exprNode.next = Some(next)
+          case assignNode: Nodes.Assign =>
+            assignNode.next = Some(next)
+          case arrAssignNode: Nodes.ArrayAssign =>
+            arrAssignNode.next = Some(next)
+          case branchNode: Nodes.Branch =>
+            branchNode.next = branchNode.next ++ List(next)
+          case mergeNode: Nodes.Merge =>
+            mergeNode.next = Some(next)
+          case cfgNode: Nodes.ControlFlowNode =>
+            println(Some(next))
+            cfgNode.next = Some(next)
+
+
+        }
+      }
     def decomposeStat(stat: StatTree, previousNode: Node): ControlFlowGraph = {
       stat match {
         case Assign(id, expr) =>
-          val callGraph = decomposeExpression(expr)
-          val assignNode = Nodes.Assign(id, expr)
-          println("Assignnode", assignNode)
-          val gr = ControlFlowGraph(Some(previousNode),
-            Some(assignNode), List(previousNode, assignNode),
+          val assignNode = Nodes.Assign(Some(previousNode), id, expr, None)
+
+          setNextNode(previousNode, assignNode)
+
+          ControlFlowGraph(Some(previousNode),
+              Some(assignNode), List(previousNode, assignNode),
             List(Edge(previousNode, assignNode)))
-          callGraph match {
-            case Some(g) =>
-              (g :: gr) ++ Edge(previousNode, g.start.get)
-            case None =>
-              gr
-          }
         case ArrayAssign(id, index, expr) =>
-          val callGraph = decomposeExpression(expr)
-          val arrAssignNode = Nodes.ArrayAssign(id, index, expr)
-          val gr = ControlFlowGraph(Some(previousNode), Some(arrAssignNode),
+          val arrAssignNode = Nodes.ArrayAssign(Some(previousNode), id, index, expr, None)
+
+          setNextNode(previousNode, arrAssignNode)
+
+          ControlFlowGraph(Some(previousNode), Some(arrAssignNode),
             List(previousNode, arrAssignNode),
             List(Edge(previousNode, arrAssignNode)))
-          callGraph match {
-            case Some(g) =>
-              g :: gr ++ Edge(previousNode, g.start.get)
-            case None =>
-              gr
-          }
         case Println(expr) =>
-          val callGraph = decomposeExpression(expr)
-          val exprNode = Nodes.Expression(expr)
-          val gr = ControlFlowGraph(Some(previousNode), Some(exprNode),
+          val exprNode = Nodes.Expression(Some(previousNode), expr, None)
+          setNextNode(previousNode, exprNode)
+
+          ControlFlowGraph(Some(previousNode), Some(exprNode),
             List(previousNode, exprNode),
             List(Edge(previousNode, exprNode)))
-          callGraph match {
-            case Some(g) =>
-              g :: gr ++ Edge(previousNode, g.start.get)
-            case None =>
-              gr
-          }
         case While(expr, stat) =>
-          val callGraph = decomposeExpression(expr)
-          val trueNode = Nodes.Expression(expr)
-          val falseNode = Nodes.Expression(Not(expr))
-          val b1 = Edge(previousNode, trueNode)
-          val b2 = Edge(previousNode, falseNode)
+          val branchNode = Nodes.Branch(Some(previousNode), List())
+          setNextNode(previousNode, branchNode)
+          val prevEdge = Edge(previousNode, branchNode)
+
+          val trueNode = Nodes.Expression(Some(branchNode), expr, None)
+          val falseNode = Nodes.Expression(Some(branchNode), Not(expr), None)
+          val b1 = Edge(branchNode, trueNode)
+          val b2 = Edge(branchNode, falseNode)
           val whileGraph = decomposeStat(stat, trueNode)
-          val gr =  ControlFlowGraph(Some(previousNode),
-            Some(falseNode), List(trueNode, falseNode) ++ whileGraph.nodes,
-            List(b1, b2) ++ whileGraph.edges)
-          callGraph match {
-            case Some(g) =>
-              g :: gr ++ Edge(previousNode, g.start.get)
-            case None =>
-              gr
-          }
+          ControlFlowGraph(Some(branchNode),
+            Some(falseNode), List(trueNode, falseNode, branchNode) ++ whileGraph.nodes,
+            List(b1, b2, prevEdge) ++ whileGraph.edges)
         case If(expr, thn, els) =>
-          val callGraph = decomposeExpression(expr)
-          val trueNode = Nodes.Expression(expr)
-          val falseNode = Nodes.Expression(Not(expr))
-          val b1 = Edge(previousNode, trueNode)
-          val b2 = Edge(previousNode, falseNode)
+          val branchNode = Nodes.Branch(Some(previousNode), List())
+          setNextNode(previousNode, branchNode)
+
+          val prevEdge = Edge(previousNode, branchNode)
+
+          val trueNode = Nodes.Expression(Some(branchNode), expr, None)
+          val falseNode = Nodes.Expression(Some(branchNode), Not(expr), None)
+
+          val b1 = Edge(branchNode, trueNode)
+          val b2 = Edge(branchNode, falseNode)
+
           val thenGraph = decomposeStat(thn, trueNode)
-          println("THENGRAPH", thenGraph)
           val elsGraph = els match {
             case Some(stat) => decomposeStat(stat, falseNode)
             case None => emptyGraph()
           }
-          val mergeNode = Nodes.Merge()
+
+          val mergeNode = elsGraph.end match {
+            case Some(node) => Nodes.Merge(List(thenGraph.end.get, node), None)
+            case None => Nodes.Merge(List(thenGraph.end.get), None)
+          }
+
           val merge1 = Edge(thenGraph.end.getOrElse(trueNode), mergeNode)
           val merge2 = Edge(elsGraph.end.getOrElse(falseNode), mergeNode)
-          val gr = ControlFlowGraph(Some(previousNode), Some(mergeNode),
-            List(trueNode, falseNode, mergeNode) ++ thenGraph.nodes ++ elsGraph.nodes,
-            List(b1, b2, merge1, merge2) ++ thenGraph.edges ++ elsGraph.edges)
-          callGraph match {
-            case Some(g) =>
-              g :: gr ++ Edge(previousNode, g.start.get)
-            case None =>
-              gr
-          }
+          ControlFlowGraph(Some(branchNode), Some(mergeNode),
+            List(trueNode, falseNode, mergeNode, branchNode) ++ thenGraph.nodes ++ elsGraph.nodes,
+            List(b1, b2, merge1, merge2, prevEdge) ++ thenGraph.edges ++ elsGraph.edges)
 
         case Block(stats) =>
           var localPrev = previousNode
-          println("Starting new BLOCK")
           stats.map(stat => {
             val g = decomposeStat(stat, localPrev)
             println(g)
@@ -179,6 +172,29 @@ object Graph extends Pipeline[Program, Program] {
           }).foldRight(new ControlFlowGraph(Some(localPrev), None, List(), List()))(_ :: _)
       }
 
+
+
+
+    }
+
+    def linkMethodCalls(cfg: ControlFlowGraph): Unit ={
+      for(node <- cfg.nodes){
+        (node match {
+          case Nodes.Expression(prev, expr, next) =>
+            decomposeExpression(expr)
+          case Nodes.ArrayAssign(prev, _, expr, index, next) =>
+            decomposeExpression(expr)
+            decomposeExpression(index)
+          case Nodes.Assign(prev, _, expr, next) =>
+            decomposeExpression(expr)
+        }) match {
+          case Some(g) =>
+            //ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges++g.edges++List(Edge(node, g.start), Edge(g.end, ))
+
+        }
+
+
+      }
     }
 
 
