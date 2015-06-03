@@ -14,7 +14,8 @@ object Graph extends Pipeline[Program, Program] {
                                  end: Option[Node] = None,
                                  nodes: Map[Int, Node] = Map[Int, Node](),
                                  edges: List[Edge] = List(),
-                                 var methodMap: Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph] = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph]()
+                                 var methodMap: Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph] = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph](),
+                                 var nodeCounter: Int = 1
                                  ) {
       def +(node: Node) = addNode(this, node)
       def ++(edge: Edge) = addEdge(this, edge)
@@ -29,6 +30,8 @@ object Graph extends Pipeline[Program, Program] {
       ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges ++ List(edge), cfg.methodMap)
     }
 
+
+
     /**
      * Create edge from n1 to n2
      * @param n1
@@ -36,7 +39,7 @@ object Graph extends Pipeline[Program, Program] {
      */
     def createEdge(n1: Node, n2:Node) = {
       val e = Edge(n1,n2)
-      setNextNode(e.src,Some(e.trg.hashCode))
+      setNextNode(e.src,Some(e.trg.idNum))
       e
     }
 
@@ -46,7 +49,8 @@ object Graph extends Pipeline[Program, Program] {
     }
 
     def addNode(cfg: ControlFlowGraph, node: Node): ControlFlowGraph = {
-      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.hashCode() -> node), cfg.edges, cfg.methodMap)
+      node.idNum = cfg.nodeCounter
+      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.idNum -> node), cfg.edges, cfg.methodMap, cfg.nodeCounter+1)
     }
 
     def append(cfg1: ControlFlowGraph, cfg2: ControlFlowGraph) = {
@@ -56,7 +60,7 @@ object Graph extends Pipeline[Program, Program] {
 
     def removeEdge(cfg: ControlFlowGraph, edge: Edge) : ControlFlowGraph = {
       setNextNode(edge.src, None)
-      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, (cfg.edges diff List(edge)), cfg.methodMap)
+      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges diff List(edge), cfg.methodMap)
     }
     buildGraph(prog)
 
@@ -72,6 +76,7 @@ object Graph extends Pipeline[Program, Program] {
         cls.methods.map(met => {
           val metGraph = decomposeMethod(ControlFlowGraph(Some(ControlFlowNode("")), Some(ControlFlowNode(""))), met)
           graph.methodMap = graph.methodMap + ((cls, met) -> metGraph)
+          metGraph
         })
       })
 
@@ -88,6 +93,13 @@ object Graph extends Pipeline[Program, Program] {
       }).foldRight(graph)((cfg1, cfg2) => { //Add all graphs together
         cfg1 :: cfg2
       })
+
+      for(met <- metGraphs){
+
+        for((key, node) <- met.nodes){
+          progGraph = progGraph + node
+        }
+      }
       //Link the final node to the end node
       progGraph ++ createEdge(previousNode, endNode)
 
@@ -125,7 +137,7 @@ object Graph extends Pipeline[Program, Program] {
         }
         0
       }
-      graphprinter(Some(progGraph.start.get.hashCode()))
+      graphprinter(Some(progGraph.start.get.idNum))
 
       progGraph
 
@@ -250,7 +262,7 @@ object Graph extends Pipeline[Program, Program] {
 
             metGraph match {
               case Some(g) =>
-                val ret = Nodes.Return(exprNode.hashCode())
+                val ret = Nodes.Return(exprNode.idNum)
                 val nextNode = cfg.nodes.get(exprNode.next.get).get //muh options
                 cfg -- Edge(exprNode, nextNode)
                 cfg + ret
@@ -268,7 +280,7 @@ object Graph extends Pipeline[Program, Program] {
             (exprGraph, indexGraph) match {
               case (Some(g1), Some(g2)) =>
                 println(s"Linking methodcall at $arrAssignNode")
-                val ret = Nodes.Return(arrAssignNode.hashCode())
+                val ret = Nodes.Return(arrAssignNode.idNum)
                 val nextNode = cfg.nodes.get(arrAssignNode.next.get).get
                 cfg -- Edge(arrAssignNode, nextNode)
                 cfg + ret
@@ -286,7 +298,7 @@ object Graph extends Pipeline[Program, Program] {
             assignGraph match {
               case Some(g) =>
                 println(s"Linking methodcall at $assignNode")
-                val ret = Nodes.Return(assignNode.hashCode())
+                val ret = Nodes.Return(assignNode.idNum)
                 val nextNode = cfg.nodes.get(assignNode.next.get).get
                 cfg -- Edge(assignNode, nextNode)
                 cfg + ret
