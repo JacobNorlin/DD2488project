@@ -9,6 +9,9 @@ object Graph extends Pipeline[Program, Program] {
 
   def run(ctx: Context)(prog: Program): Program = {
 
+    var nodeCounter: Int = 1
+
+
     case class ControlFlowGraph(
                                  start: Option[Node] = None,
                                  end: Option[Node] = None,
@@ -31,7 +34,6 @@ object Graph extends Pipeline[Program, Program] {
       ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges ++ List(edge), cfg.methodMap)
     }
 
-    var nodeCounter: Int = 1
 
     def getNewNodeId() = {
       val id = nodeCounter
@@ -56,6 +58,7 @@ object Graph extends Pipeline[Program, Program] {
     }
 
     def addNode(cfg: ControlFlowGraph, node: Node): ControlFlowGraph = {
+      val numid = node.idNum
       ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.idNum -> node), cfg.edges, cfg.methodMap)
     }
 
@@ -74,11 +77,10 @@ object Graph extends Pipeline[Program, Program] {
     def buildGraph(prog: Program): ControlFlowGraph = {
       val endNode: Node = Nodes.ControlFlowNode("end")
       val startNode: Node = Nodes.ControlFlowNode("start")
-      endNode.idNum = getNewNodeId()
       startNode.idNum = getNewNodeId()
-      val graph = ControlFlowGraph(Some(startNode), Some(endNode))
-      graph + startNode
-      graph + endNode
+      endNode.idNum = getNewNodeId()
+      println("startNode id ", startNode.idNum)
+      val graph = ControlFlowGraph(Some(startNode), Some(endNode)) + startNode + endNode
 
       val metGraphs = prog.classes.flatMap(cls => {
         cls.methods.map(met => {
@@ -114,17 +116,16 @@ object Graph extends Pipeline[Program, Program] {
       //Link the final node to the end node
       progGraph ++ createEdge(previousNode, endNode)
 
-      println(progGraph.nodes)
 
       progGraph = linkMethodCalls(progGraph)
+      println(progGraph.nodes)
+      println("current nodes", nodeCounter)
 
       //print da graph
 
       def graphprinter(node: Option[Int]): Int = {
 
         if(node != None){
-
-          println(node)
 
           progGraph.nodes.get(node.get).get match {
             case nd: Nodes.Assign => println(nd)
@@ -223,7 +224,7 @@ object Graph extends Pipeline[Program, Program] {
           val whileGraph = decomposeStat(stat, trueNode)
           ControlFlowGraph(Some(branchNode),
             Some(falseNode), whileGraph.nodes,
-            List(b1, b2, e) ++ whileGraph.edges) + trueNode + falseNode + branchNode
+            List(b1, b2, e) ++ whileGraph.edges) + trueNode + falseNode + branchNode + previousNode
         case If(expr, thn, els) =>
           //Create branch point
           val branchNode = Nodes.Branch()
@@ -257,7 +258,7 @@ object Graph extends Pipeline[Program, Program] {
 
           ControlFlowGraph(Some(branchNode), Some(mergeNode),
             thenGraph.nodes ++ elsGraph.nodes,
-            List(b1, b2, thenMerge, elseMerge, e) ++ thenGraph.edges ++ elsGraph.edges) + trueNode + falseNode + mergeNode + branchNode
+            List(b1, b2, thenMerge, elseMerge, e) ++ thenGraph.edges ++ elsGraph.edges) + trueNode + falseNode + mergeNode + branchNode + previousNode
 
         case Block(stats) =>
           var localPrev = previousNode
@@ -275,7 +276,8 @@ object Graph extends Pipeline[Program, Program] {
     }
 
     def linkMethodCalls(cfg: ControlFlowGraph): ControlFlowGraph ={
-      for(node <- cfg.nodes) {
+      var returnGraph = cfg
+      for((key, node) <- cfg.nodes) {
 
         node match {
           case exprNode: Nodes.Expression =>
@@ -286,13 +288,12 @@ object Graph extends Pipeline[Program, Program] {
                 val ret = Nodes.Return(exprNode.idNum)
                 ret.idNum = getNewNodeId()
                 val nextNode = cfg.nodes.get(exprNode.next.get).get //muh options
-                cfg -- Edge(exprNode, nextNode)
-                cfg + ret
-                println(s"Linking methodcall at $exprNode with $ret")
-                cfg ++ createEdge(exprNode, ret)
-                cfg ++ createEdge(exprNode, g.start.get)
-                cfg ++ createEdge(g.end.get, ret)
-                cfg ++ createEdge(ret, nextNode)
+                returnGraph = returnGraph -- Edge(exprNode, nextNode) +
+                  ret ++
+                  createEdge(exprNode, ret)++
+                  createEdge(exprNode, g.start.get)++
+                  createEdge(g.end.get, ret)++
+                  createEdge(ret, nextNode)
               case None =>
 
             }
@@ -305,31 +306,32 @@ object Graph extends Pipeline[Program, Program] {
                 val ret = Nodes.Return(arrAssignNode.idNum)
                 ret.idNum = getNewNodeId()
                 val nextNode = cfg.nodes.get(arrAssignNode.next.get).get
-                cfg -- Edge(arrAssignNode, nextNode)
-                cfg + ret
-                cfg ++ createEdge(arrAssignNode, ret)
-                cfg ++ createEdge(arrAssignNode, g1.start.get)
-                cfg ++ createEdge(arrAssignNode, g2.start.get)
-                cfg ++ createEdge(g1.end.get, arrAssignNode)
-                cfg ++ createEdge(g2.end.get, arrAssignNode)
-                cfg ++ createEdge(ret, nextNode)
+                returnGraph = returnGraph -- Edge(arrAssignNode, nextNode)+
+                  ret ++
+                  createEdge(arrAssignNode, ret) ++
+                  createEdge(arrAssignNode, g1.start.get) ++
+                  createEdge(arrAssignNode, g2.start.get)++
+                  createEdge(g1.end.get, arrAssignNode) ++
+                  createEdge(g2.end.get, arrAssignNode) ++
+                  createEdge(ret, nextNode)
               case _ => None
             }
           case assignNode: Nodes.Assign =>
+
             val assignGraph = decomposeExpression(assignNode.expr, cfg.methodMap)
 
             assignGraph match {
               case Some(g) =>
-                println(s"Linking methodcall at $assignNode")
                 val ret = Nodes.Return(assignNode.idNum)
                 ret.idNum = getNewNodeId()
                 val nextNode = cfg.nodes.get(assignNode.next.get).get
-                cfg -- Edge(assignNode, nextNode)
-                cfg + ret
-                cfg ++ createEdge(assignNode, ret)
-                cfg ++ createEdge(assignNode, g.start.get)
-                cfg ++ createEdge(g.end.get, assignNode)
-                cfg ++ createEdge(ret, nextNode)
+                returnGraph = returnGraph -- Edge(assignNode, nextNode) +
+                  ret ++
+                  createEdge(assignNode, ret) ++
+                  createEdge(assignNode, g.start.get) ++
+                  createEdge(g.end.get, assignNode) ++
+                  createEdge(ret, nextNode)
+              case _ =>
             }
           case _ => //Do nothing
         }
@@ -337,7 +339,7 @@ object Graph extends Pipeline[Program, Program] {
 
 
       }
-      cfg
+      returnGraph
     }
 
 
@@ -346,6 +348,89 @@ object Graph extends Pipeline[Program, Program] {
         val clsDecl = prog.classes.find(cls => cls.id.value==obj.getType.toString).get
         val metDecl = clsDecl.methods.find(met => met.id.value == meth.value).get
         methodMap.get((clsDecl, metDecl))
+      case And(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case Or(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case Plus(lhs: ExprTree, rhs: ExprTree) => val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case Minus(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case Times(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case Div(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case LessThan(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case Equals(lhs: ExprTree, rhs: ExprTree) =>
+        val g1 = decomposeExpression(lhs, methodMap)
+        val g2 = decomposeExpression(lhs, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case ArrayRead(arr: ExprTree, index: ExprTree) =>
+        val g1 = decomposeExpression(arr, methodMap)
+        val g2 = decomposeExpression(index, methodMap)
+        (g1, g2) match{
+          case (Some(g1), _) => Some(g1)
+          case (_, Some(g2)) => Some(g2)
+          case _ => None
+
+        }
+      case ArrayLength(arr: ExprTree) => decomposeExpression(arr, methodMap)
+      case NewIntArray(size: ExprTree) => decomposeExpression(size, methodMap)
+      case Not(expr: ExprTree) => decomposeExpression(expr, methodMap)
       case _ => None
     }
 
