@@ -6,7 +6,7 @@ object Multiplicator {
     else{
       println("Fail..");
     }
-    println("fuck");
+
   }
   
 }
@@ -23,6 +23,7 @@ class PaperMulti{
     var aux : Int;
     var translate : Int;
     var initString : String;
+
     
     result = factor1 * factor2;
     
