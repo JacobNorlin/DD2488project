@@ -7,70 +7,101 @@ import koolcNew.utils.{Context, Pipeline}
 
 object Graph extends Pipeline[Program, Program] {
 
+  var nodeCounter: Int = 1
+
+
+  case class ControlFlowGraph(
+                               start: Option[Node] = None,
+                               end: Option[Node] = None,
+                               nodes: Map[Int, Node] = Map[Int, Node](),
+                               edges: List[Edge] = List(),
+                               var methodMap: Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph] = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph](),
+                               var vars: List[VarDecl] = List(),
+                               var args: List[Formal] = List()
+                               ) {
+    def +(node: Node) = addNode(this, node)
+    def ++(edge: Edge) = addEdge(this, edge)
+    def --(edge: Edge) = removeEdge(this, edge)
+
+    def ::(cfg: ControlFlowGraph) = append(this, cfg)
+    override def toString: String = "{"+start+", "+end+" }"
+  }
+
+
+
+
+  def addEdge(cfg: ControlFlowGraph, edge: Edge): ControlFlowGraph ={
+    ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges ++ List(edge), cfg.methodMap)
+  }
+
+
+  def getNewNodeId() = {
+    val id = nodeCounter
+    nodeCounter = nodeCounter + 1
+    id
+  }
+
+  /**
+   * Create edge from n1 to n2
+   * @param n1
+   * @param n2
+   */
+  def createEdge(n1: Node, n2:Node) = {
+    val e = Edge(n1,n2)
+    setNextNode(e.src,Some(e.trg.idNum))
+    e
+  }
+
+
+  def emptyGraph() = {
+    ControlFlowGraph()
+  }
+
+  def addNode(cfg: ControlFlowGraph, node: Node): ControlFlowGraph = {
+    val numid = node.idNum
+    ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.idNum -> node), cfg.edges, cfg.methodMap)
+  }
+
+  def append(cfg1: ControlFlowGraph, cfg2: ControlFlowGraph) = {
+    ControlFlowGraph(cfg1.start, cfg2.end, cfg1.nodes ++ cfg2.nodes, cfg1.edges ++ cfg2.edges, cfg1.methodMap ++ cfg2.methodMap)
+  }
+
+
+  def removeEdge(cfg: ControlFlowGraph, edge: Edge) : ControlFlowGraph = {
+    setNextNode(edge.src, None)
+    ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges diff List(edge), cfg.methodMap)
+  }
+
+  def setNextNode(trg: Node, nxt: Option[Int]): Unit= {
+    trg match {
+      case exprNode: Nodes.Expression =>
+        exprNode.next = nxt
+      case assignNode: Nodes.Assign =>
+        assignNode.next = nxt
+      case arrAssignNode: Nodes.ArrayAssign =>
+        arrAssignNode.next = nxt
+      case branchNode: Nodes.Branch =>
+        nxt match {
+          case Some(n) =>
+            branchNode.next = branchNode.next ++ List(n)
+          case None =>
+            branchNode.next = List()
+
+        }
+      case mergeNode: Nodes.Merge =>
+        mergeNode.next = nxt
+      case cfgNode: Nodes.ControlFlowNode =>
+        cfgNode.next = nxt
+      case retNode: Nodes.Return =>
+        retNode.next = nxt
+    }
+  }
+
   def run(ctx: Context)(prog: Program): Program = {
 
-    var nodeCounter: Int = 1
-
-
-    case class ControlFlowGraph(
-                                 start: Option[Node] = None,
-                                 end: Option[Node] = None,
-                                 nodes: Map[Int, Node] = Map[Int, Node](),
-                                 edges: List[Edge] = List(),
-                                 var methodMap: Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph] = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph]()
-                                 ) {
-      def +(node: Node) = addNode(this, node)
-      def ++(edge: Edge) = addEdge(this, edge)
-      def --(edge: Edge) = removeEdge(this, edge)
-
-      def ::(cfg: ControlFlowGraph) = append(this, cfg)
-      override def toString: String = "{"+start+", "+end+" }"
-    }
 
 
 
-
-    def addEdge(cfg: ControlFlowGraph, edge: Edge): ControlFlowGraph ={
-      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges ++ List(edge), cfg.methodMap)
-    }
-
-
-    def getNewNodeId() = {
-      val id = nodeCounter
-      nodeCounter = nodeCounter + 1
-      id
-    }
-
-    /**
-     * Create edge from n1 to n2
-     * @param n1
-     * @param n2
-     */
-    def createEdge(n1: Node, n2:Node) = {
-      val e = Edge(n1,n2)
-      setNextNode(e.src,Some(e.trg.idNum))
-      e
-    }
-
-
-    def emptyGraph() = {
-      ControlFlowGraph()
-    }
-
-    def addNode(cfg: ControlFlowGraph, node: Node): ControlFlowGraph = {
-      val numid = node.idNum
-      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.idNum -> node), cfg.edges, cfg.methodMap)
-    }
-
-    def append(cfg1: ControlFlowGraph, cfg2: ControlFlowGraph) = {
-      ControlFlowGraph(cfg1.start, cfg2.end, cfg1.nodes ++ cfg2.nodes, cfg1.edges ++ cfg2.edges, cfg1.methodMap ++ cfg2.methodMap)
-    }
-
-
-    def removeEdge(cfg: ControlFlowGraph, edge: Edge) : ControlFlowGraph = {
-      setNextNode(edge.src, None)
-      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges diff List(edge), cfg.methodMap)
-    }
     buildGraph(prog)
 
 
@@ -89,6 +120,8 @@ object Graph extends Pipeline[Program, Program] {
           val me = ControlFlowNode("metEnd")
           val metGraph = decomposeMethod(ControlFlowGraph(Some(ms), Some(me)),  met)
           graph.methodMap = graph.methodMap + ((cls, met) -> metGraph)
+          metGraph.vars = metGraph.vars ++ met.vars ++ cls.vars
+          metGraph.args = metGraph.args ++ met.args
           metGraph
         })
       })
@@ -108,10 +141,12 @@ object Graph extends Pipeline[Program, Program] {
       })
 
       for(met <- metGraphs){
-
         for((key, node) <- met.nodes){
           progGraph = progGraph + node
+
         }
+        progGraph.vars = progGraph.vars ++ met.vars
+        progGraph.args = progGraph.args ++ met.args
       }
       //Link the final node to the end node
       progGraph ++ createEdge(previousNode, endNode)
@@ -156,30 +191,7 @@ object Graph extends Pipeline[Program, Program] {
     }
 
 
-    def setNextNode(trg: Node, nxt: Option[Int]): Unit= {
-      trg match {
-        case exprNode: Nodes.Expression =>
-          exprNode.next = nxt
-        case assignNode: Nodes.Assign =>
-          assignNode.next = nxt
-        case arrAssignNode: Nodes.ArrayAssign =>
-          arrAssignNode.next = nxt
-        case branchNode: Nodes.Branch =>
-          nxt match {
-            case Some(n) =>
-              branchNode.next = branchNode.next ++ List(n)
-            case None =>
-              branchNode.next = List()
 
-          }
-        case mergeNode: Nodes.Merge =>
-          mergeNode.next = nxt
-        case cfgNode: Nodes.ControlFlowNode =>
-          cfgNode.next = nxt
-        case retNode: Nodes.Return =>
-          retNode.next = nxt
-      }
-    }
 
     def decomposeStat(stat: StatTree, previousNode: Node): ControlFlowGraph = {
       stat match {
