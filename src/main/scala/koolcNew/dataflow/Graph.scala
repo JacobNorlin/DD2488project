@@ -15,7 +15,6 @@ object Graph extends Pipeline[Program, Program] {
                                  nodes: Map[Int, Node] = Map[Int, Node](),
                                  edges: List[Edge] = List(),
                                  var methodMap: Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph] = Map[Tuple2[ClassDecl, MethodDecl], ControlFlowGraph](),
-                                 var nodeCounter: Int = 1
                                  ) {
       def +(node: Node) = addNode(this, node)
       def ++(edge: Edge) = addEdge(this, edge)
@@ -25,9 +24,17 @@ object Graph extends Pipeline[Program, Program] {
       override def toString: String = "{"+start+", "+end+" }"
     }
 
+    var nodeCounter: Int = 1
+
 
     def addEdge(cfg: ControlFlowGraph, edge: Edge): ControlFlowGraph ={
       ControlFlowGraph(cfg.start, cfg.end, cfg.nodes, cfg.edges ++ List(edge), cfg.methodMap)
+    }
+
+    def getNewNodeId(cfg: ControlFlowGraph) = {
+      val id = nodeCounter
+      nodeCounter = nodeCounter + 1
+      id
     }
 
 
@@ -49,8 +56,7 @@ object Graph extends Pipeline[Program, Program] {
     }
 
     def addNode(cfg: ControlFlowGraph, node: Node): ControlFlowGraph = {
-      node.idNum = cfg.nodeCounter
-      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.idNum -> node), cfg.edges, cfg.methodMap, cfg.nodeCounter+1)
+      ControlFlowGraph(cfg.start, cfg.end, cfg.nodes + (node.idNum -> node), cfg.edges, cfg.methodMap)
     }
 
     def append(cfg1: ControlFlowGraph, cfg2: ControlFlowGraph) = {
